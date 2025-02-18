@@ -58,6 +58,14 @@ frappe.query_reports["Warehouse To Warehouse"] = {
 			"default":1,
 			
 			
+		},
+		{
+			"fieldname": "remove_precision",
+			"label": "Remove Precision",
+			"fieldtype": "Check",
+			"default":1,
+			
+			
 		}
 	],
 	"formatter": function (value, row, column, data, default_formatter) {
