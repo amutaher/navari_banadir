@@ -22,7 +22,7 @@ def get_columns(filters):
 		{"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 150, "hidden":1},
 		{"label": "From Warehouse", "fieldname": "from_warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
 		{"label": "To Warehouse", "fieldname": "to_warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 150},
-		{"label": "Transferred Qty", "fieldname": "qty", "fieldtype": "Float", "width": 120},
+		{"label": "Transferred Qty", "fieldname": "qty", "fieldtype": "Int" if filters.remove_precision==1 else "Float", "width": 120},
 		{"label": "Current Qty in Destination", "fieldname": "current_qty", "fieldtype": "Float", "width": 150, "hidden":1},
 		{"label":"Valuation Rate", "fieldname":"valuation_rate", "fieldtype":"Currency","options":"currency", "width": 120, "hidden":1 if filters.get('hide_column') else 0},
 		{"label":"Rate", "fieldname":"rate", "fieldtype":"Currency","options":"currency", "width": 120, "options":"currency","hidden":1 if filters.get('hide_column') else 0},
