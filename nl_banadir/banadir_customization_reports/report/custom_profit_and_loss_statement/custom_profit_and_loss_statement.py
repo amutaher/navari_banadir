@@ -24,7 +24,7 @@ def execute(filters=None):
 		filters.periodicity,
 		company=filters.company,
 	)
-
+	# frappe.throw(str(filters))
 	income = get_data(
 		filters.company,
 		"Income",
@@ -67,7 +67,7 @@ def execute(filters=None):
 	report_summary, primitive_summary = get_report_summary(
 		period_list, filters.periodicity, income, expense, net_profit_loss, currency, filters
 	)
-
+	# frappe.throw(str(data))
 	return columns, data, None, chart, report_summary, primitive_summary
 
 
@@ -256,7 +256,7 @@ def get_period_list(
 		if not ignore_fiscal_year:
 			period.to_date_fiscal_year = get_fiscal_year(period.to_date, company=company)[0]
 			period.from_date_fiscal_year_start_date = get_fiscal_year(period.from_date, company=company)[1]
-
+		# frappe.throw(str(period))
 		period_list.append(period)
 		if period.to_date == year_end_date:
 			break
@@ -282,6 +282,8 @@ def get_period_list(
 				"year_end_date": year_end_date,
 			}
 		)
+	# frappe.throw(str(opts))
+	# frappe.throw(str(period_list))
 	return period_list
 
 
@@ -295,6 +297,8 @@ def get_period_list(
 # 	)
 
 # 	return fiscal_year[0] if fiscal_year else {}
+
+
 def get_fiscal_year_data(from_fiscal_year, to_fiscal_year):
 	# Get the actual start and end dates for the selected fiscal years
 	from_fy_dates = frappe.db.get_value("Fiscal Year", from_fiscal_year, ["year_start_date", "year_end_date"], as_dict=True)
@@ -316,7 +320,6 @@ def get_fiscal_year_data(from_fiscal_year, to_fiscal_year):
 	)
 	# frappe.throw(str(fiscal_year))
 	return fiscal_year[0] if fiscal_year else {}
-
 
 
 def validate_fiscal_year(fiscal_year, from_fiscal_year, to_fiscal_year):
@@ -343,7 +346,10 @@ def get_months(start_date, end_date):
 def get_label(periodicity, from_date, to_date):
 	if periodicity == "Yearly":
 		if formatdate(from_date, "YYYY") == formatdate(to_date, "YYYY"):
-			label = formatdate(from_date, "YYYY")
+			fiscal_year = frappe.get_value("Fiscal Year", {"year_start_date": from_date, "year_end_date":to_date}, "name")
+			label = fiscal_year if fiscal_year else formatdate(from_date, "YYYY")
+		# else:
+		# 	label = formatdate(from_date, "YYYY")
 		else:
 			label = formatdate(from_date, "YYYY") + "-" + formatdate(to_date, "YYYY")
 	else:
@@ -366,7 +372,6 @@ def get_data(
 	accounts = get_accounts(company, root_type)
 	if not accounts:
 		return None
-
 	accounts, accounts_by_name, parent_children_map = filter_accounts(accounts)
 
 	company_currency = get_appropriate_currency(company, filters)
@@ -409,7 +414,7 @@ def get_data(
 
 	if out and total:
 		add_total_row(out, root_type, balance_must_be, period_list, company_currency)
-
+	# frappe.throw(str(out))
 	return out
 
 
