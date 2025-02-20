@@ -6,6 +6,7 @@
 import frappe
 from frappe import _, scrub
 from frappe.utils import cint, flt, getdate, nowdate
+from frappe.query_builder.functions import Abs, Date, Sum
 
 from erpnext.accounts.party import get_partywise_advanced_payment_amount
 from erpnext.accounts.report.accounts_receivable.accounts_receivable import (
@@ -63,14 +64,27 @@ class AccountsReceivableSummary(ReceivablePayableReport):
                 party = self.filters.get(scrub(party_type))
 
         party_advance_amount = (
-            get_partywise_advanced_payment_amount(
-                self.party_type,
-                self.filters.report_date,
-                self.filters.show_future_payments,
-                self.filters.company,
-                party=party,
+            (
+                get_partywise_advanced_payment_amount_in_party_currency(
+                    self.party_type,
+                    self.filters.report_date,
+                    self.filters.show_future_payments,
+                    self.filters.company,
+                    party=party,
+                )
+                or {}
             )
-            or {}
+            if self.filters.in_party_currency
+            else (
+                get_partywise_advanced_payment_amount(
+                    self.party_type,
+                    self.filters.report_date,
+                    self.filters.show_future_payments,
+                    self.filters.company,
+                    party=party,
+                )
+                or {}
+            )
         )
 
         if self.filters.show_gl_balance:
@@ -402,3 +416,72 @@ def get_gl_balance(report_date, company):
             as_list=1,
         )
     )
+
+
+def get_partywise_advanced_payment_amount_in_party_currency(
+    party_type, posting_date=None, future_payment=0, company=None, party=None
+):
+    account_type = frappe.get_cached_value("Party Type", party_type, "account_type")
+
+    ple = frappe.qb.DocType("Payment Ledger Entry")
+    acc = frappe.qb.DocType("Account")
+
+    query = (
+        frappe.qb.from_(ple)
+        .inner_join(acc)
+        .on(ple.account == acc.name)
+        .select(ple.party)
+        .where(
+            (ple.party_type.isin(party_type))
+            & (acc.account_type == account_type)
+            & (ple.delinked == 0)
+        )
+        .groupby(ple.party)
+    )
+
+    if posting_date:
+        if future_payment:
+            query = query.where(
+                (ple.posting_date <= posting_date)
+                | (Date(ple.creation) <= posting_date)
+            )
+        else:
+            query = query.where(ple.posting_date <= posting_date)
+
+    if company:
+        query = query.where(ple.company == company)
+
+    if party:
+        query = query.where(ple.party == party)
+
+    if invoice_doctypes := frappe.get_hooks("invoice_doctypes"):
+        query = query.where(ple.voucher_type.notin(invoice_doctypes))
+
+    # Get advance amount from Receivable / Payable Account
+    party_ledger = query.select(Abs(Sum(ple.amount_in_account_currency).as_("amount")))
+    party_ledger = party_ledger.where(ple.amount_in_account_currency < 0)
+    party_ledger = party_ledger.where(ple.against_voucher_no == ple.voucher_no)
+    party_ledger = party_ledger.where(
+        acc.root_type == ("Liability" if account_type == "Payable" else "Asset")
+    )
+
+    data = party_ledger.run()
+    data = frappe._dict(data or {})
+
+    # Get advance amount from Advance Account
+    advance_ledger = query.select(
+        Sum(ple.amount_in_account_currency).as_("amount"), ple.account
+    )
+    advance_ledger = advance_ledger.where(
+        acc.root_type == ("Asset" if account_type == "Payable" else "Liability")
+    )
+    advance_ledger = advance_ledger.groupby(ple.account)
+    advance_ledger = advance_ledger.having(Sum(ple.amount_in_account_currency) < 0)
+
+    advance_data = advance_ledger.run()
+
+    for row in advance_data:
+        data.setdefault(row[0], 0)
+        data[row[0]] += abs(row[1])
+
+    return data
