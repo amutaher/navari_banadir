@@ -2,7 +2,7 @@ app_name = "nl_banadir"
 app_title = "Banadir Customization-Reports"
 app_publisher = "Navari Ltd"
 app_description = "Banadir Reports"
-app_email = "mania@navari.co.ke"
+app_email = "support@navari.co.ke"
 app_license = "agpl-3.0"
 # required_apps = []
 
