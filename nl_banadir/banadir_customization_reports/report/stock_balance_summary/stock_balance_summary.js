@@ -127,6 +127,12 @@ frappe.query_reports["Stock Balance Summary"] = {
       fieldtype: "Check",
       default: 1,
     },
+    {
+      fieldname: "show_in_out_qty",
+      label: __("Show In/Out Qty"),
+      fieldtype: "Check",
+      default: 0,
+    },
   ],
 
   formatter: function (value, row, column, data, default_formatter) {
@@ -134,7 +140,7 @@ frappe.query_reports["Stock Balance Summary"] = {
 
     if (data && data.bal_qty > 0) {
       // Check if the column fieldname contains 'bal_qty'
-      if (column.fieldname.includes("bal_qty")) {
+      if (column.fieldname.includes("qty")) {
         // Format the value with thousand separators
         // Split the value into integer and decimal parts
         let [integerPart, decimalPart] = value.toString().split(".");
