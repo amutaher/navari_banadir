@@ -83,18 +83,6 @@ class StockBalanceReport:
             if self.data:
                 self.get_warehouse_totals(data=self.data)
 
-        total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
-
-        # if not self.filters.get("show_warehouse_totals"):
-        total_row = {
-            "item_code": _("Overall Total"),
-            "bal_qty": total_bal_qty,
-            "bal_qty_alt": total_bal_alternative_uom_qty,
-            "bal_val": 0.0,
-            "is_total": True,
-        }
-
-        self.data.append(total_row)
 
         if self.filters.get("eliminate_zero_values"):
             updated_data = []
@@ -103,6 +91,23 @@ class StockBalanceReport:
                     updated_data.append(entry)
 
             self.data = updated_data
+
+        total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
+        total_in_qty = sum(row.get("in_qty", 0) for row in self.data)
+        total_out_qty = sum(row.get("out_qty", 0) for row in self.data)
+
+        # if not self.filters.get("show_warehouse_totals"):
+        total_row = {
+            "item_code": _("Overall Total"),
+            "bal_qty": total_bal_qty,
+            "bal_qty_alt": total_bal_alternative_uom_qty,
+            "in_qty": total_in_qty,
+            "out_qty": total_out_qty,
+            "bal_val": 0.0,
+            "is_total": True,
+        }
+
+        self.data.append(total_row)
 
         return self.columns, self.data
 
@@ -568,10 +573,12 @@ class StockBalanceReport:
                 {
                     "label": _("In Qty"),
                     "fieldname": "in_qty",
-                    "fieldtype": "Float",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
                     "width": 80,
                     "convertible": "qty",
-                    "hidden": 1,
+                    "hidden": 0 if self.filters.get("show_in_out_qty") else 1,
                 },
                 {
                     "label": _("In Value"),
@@ -583,10 +590,12 @@ class StockBalanceReport:
                 {
                     "label": _("Out Qty"),
                     "fieldname": "out_qty",
-                    "fieldtype": "Float",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
                     "width": 80,
                     "convertible": "qty",
-                    "hidden": 1,
+                    "hidden": 0 if self.filters.get("show_in_out_qty") else 1,
                 },
                 {
                     "label": _("Out Value"),
