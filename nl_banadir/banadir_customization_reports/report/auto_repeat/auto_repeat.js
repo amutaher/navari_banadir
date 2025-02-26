@@ -50,5 +50,11 @@ frappe.query_reports["Auto Repeat"] = {
       reqd: 1,
       default: frappe.datetime.get_today(),
     },
+    {
+      fieldname: "status",
+      lanel: __("Status"),
+      fieldtype: "Select",
+      options: "\nActive\nCompleted",
+    },
   ],
 };
