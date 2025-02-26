@@ -8,6 +8,8 @@ from frappe import _
 from frappe.utils import getdate
 from frappe.query_builder import DocType
 
+from collections import defaultdict
+
 
 class AutoRepeatFilter(TypedDict):
     company: str | None
@@ -15,6 +17,7 @@ class AutoRepeatFilter(TypedDict):
     reference_document: str | None
     start_date: str
     end_date: str
+    status: str
 
 
 def execute(filters: AutoRepeatFilter | None = None):
@@ -127,9 +130,35 @@ class AutoRepeat:
                 ar_doctype.reference_document == self.filters.get("reference_document")
             )
 
+        if self.filters.get("status"):
+            query = query.where(ar_doctype.status == self.filters.get("status"))
+
         query = query.where(
             (ar_doctype.docstatus < 2)
             & (ar_doctype.start_date >= self.start_date)
             & (ar_doctype.end_date <= self.end_date)
         )
-        return query.run(as_dict=True)
+
+        query_data = query.run(as_dict=True)
+        data = self.prepare_data(query_data)
+
+        return data
+
+    def prepare_data(self, data):
+        updated_data = defaultdict(lambda: {})
+        for d in data:
+            key = d["auto_repeat"]
+            updated_data[key]["auto_repeat"] = d.get("auto_repeat")
+            updated_data[key]["reference_document"] = d.get("reference_document")
+            updated_data[key]["start_date"] = d.get("start_date")
+            updated_data[key]["end_date"] = d.get("end_date")
+            updated_data[key]["status"] = d.get("status")
+            updated_data[key]["frequency"] = d.get("frequency")
+            updated_data[key]["next_schedule_date"] = (
+                d.get("next_schedule_date") if d.get("status") == "Active" else None
+            )
+            updated_data[key]["company"] = d.get("company")
+
+        prepared_data = list(updated_data.values())
+
+        return prepared_data
