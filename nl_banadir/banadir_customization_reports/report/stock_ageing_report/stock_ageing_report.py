@@ -74,15 +74,6 @@ def format_report_data(filters: Filters, item_details: dict, to_date: str) -> li
 	if filters.get("alternative_uom"):
 		data = convert_alternative_uom(data=data, filters=filters)
 
-	# Apply remove precision after UOM conversion
-	if filters.get("remove_precision"):
-		data = [
-			[
-				f"{int(col):,}" if isinstance(col, (float, int)) else col
-				for col in row
-			]
-			for row in data
-		]
 
 	return data
 
@@ -131,8 +122,8 @@ def get_columns(filters: Filters) -> list[dict]:
 			"options": "Item",
 			"width": 100,
 		},
-		{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 100},
-		{"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 200},
+		{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 100, "hidden":1},
+		{"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 200, "hidden":1},
 		{
 			"label": _("Item Group"),
 			"fieldname": "item_group",
@@ -160,7 +151,7 @@ def get_columns(filters: Filters) -> list[dict]:
 			}
 		]
 
-	qty_fieldtype = "Data" if filters.get("remove_precision") else "Float"
+	qty_fieldtype = "Int" if filters.get("remove_precision") else "Float"
 
 
 	columns.extend(
@@ -214,7 +205,7 @@ def setup_ageing_columns(filters: Filters, range_columns: list):
 
 	ranges.append(f"{prev_range_value} - Above")
 
-	fieldtype = "Data" if filters.get("remove_precision") else "Float"
+	fieldtype = "Int" if filters.get("remove_precision") else "Float"
 
 	for i, label in enumerate(ranges):
 		fieldname = "range" + str(i + 1)
@@ -530,13 +521,12 @@ def convert_alternative_uom(data, filters):
 	if alternative_uom:
 		for row in data:
 			converstion_factor = get_conversion_factor(row[0], alternative_uom)
-			columns_to_convert = [5]
+			available_qty_index = 5
 
-			for idx in columns_to_convert:
-				if idx < len(row):
-					value = row[idx]
-					if isinstance(value, (int, float)):
-						row[idx] = value / converstion_factor
+			if available_qty_index < len(row):
+				value = row[available_qty_index]
+				if isinstance(value, (int, float)):
+					row[available_qty_index] = value / converstion_factor
 
 	return data
 

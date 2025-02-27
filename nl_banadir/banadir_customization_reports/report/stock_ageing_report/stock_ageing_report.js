@@ -78,4 +78,15 @@ frappe.query_reports["Stock Ageing Report"] = {
             default: 0,
         },
 	],
+
+	formatter: function (value, row, column, data, default_formatter) {
+		let remove_precision = frappe.query_report.get_filter_value("remove_precision");
+		
+		if (typeof value === "number") {
+			if (remove_precision) {
+				return Math.round(value).toLocaleString("en-US");
+			}
+		}
+		return default_formatter ? default_formatter(value, row, column, data) : value;
+	},
 };
