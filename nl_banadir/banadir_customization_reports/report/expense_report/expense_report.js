@@ -84,6 +84,16 @@ erpnext.financial_statement = {
 			value = $value.wrap("<p></p>").parent().html();
 		}
 
+		if (data && data.is_group) {
+			value = $(`<span>${value}</span>`).css("font-weight", "bold");
+
+			if (data.warn_if_negative && data[column.fieldname] < 0) {
+				value = $(value).addClass("text-danger");
+			}
+
+			value = $(value).wrap("<p></p>").parent().html();
+		}
+
 		return value;
 	},
 	open_general_ledger: function (data) {
@@ -305,7 +315,6 @@ frappe.query_reports["Expense Report"]["filters"].push({
 	label: __("Accumulated Values"),
 	fieldtype: "Check",
 	default: 1,
-    hidden: 1,
 });
 
 frappe.query_reports["Expense Report"]["filters"].push({

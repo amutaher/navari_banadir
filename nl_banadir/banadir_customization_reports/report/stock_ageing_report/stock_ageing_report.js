@@ -75,7 +75,7 @@ frappe.query_reports["Stock Ageing Report"] = {
             fieldname: "remove_precision",
             label: __("Remove Precision"),
             fieldtype: "Check",
-            default: 0,
+            default: 1,
         },
 	],
 
