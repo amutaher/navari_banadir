@@ -31,10 +31,12 @@ fixtures = [
 doc_events = {
     "Sales Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.sales_invoice_before_submit",
+        "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.shipping_details.sync_shipping_details",
     },
     "Purchase Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.purchase_invoice_before_submit",
         "autoname": "nl_banadir.banadir_customization_reports.controllers.purchase_invoice.auto_name",
+        "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.shipping_details.sync_shipping_details",
     },
     "Payment Entry": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.payment_entry_before_submit",
