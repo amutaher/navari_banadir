@@ -34,12 +34,11 @@ frappe.query_reports["Custom P & L Statement"] = {
             reqd: 1
         },
         {
-            fieldname: "currency",
-            label: __("Currency"),
-            fieldtype: "Link",
-            options: "Currency",
-            default: frappe.defaults.get_user_default("Currency")
-        },
+			fieldname: "presentation_currency",
+			label: __("Currency"),
+			fieldtype: "Select",
+			options: erpnext.get_presentation_currency_list(),
+		},
         {
             fieldname: "cost_center",
             label: __("Cost Center"),
