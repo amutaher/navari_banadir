@@ -9,7 +9,8 @@ def sync_shipping_details(doc, method):
     frappe.enqueue(
         "nl_banadir.banadir_customization_reports.controllers.shipping_details.process_shipping_sync",
         queue="short",
-        doc=doc
+        job_id=f"sync_shipping_details_for_{doc.doctype}_{doc.name}",
+        doc=doc,
     )
 
 
@@ -20,10 +21,17 @@ def process_shipping_sync(doc):
     """
     
     fields_to_sync = [
-        "custom_actual_arrival_date",
-        "custom_estimated_date_of_arrival",
+        "custom_container_no",
+        "custom_port_of_loading",
+        "custom_bill_of_landing",
+        "custom_bil",
         "custom_estimated_date_of_departure",
-        "custom_shipping_status"
+        "custom_destination",
+        "custom_port_of_discharge",
+        "custom_container_quantity",
+        "custom_estimated_date_of_arrival",
+        "custom_actual_arrival_date",
+        "custom_shipping_status",
     ]
 
     original_doc = frappe.get_doc(doc.doctype, doc.name, for_update=False)
