@@ -24,6 +24,9 @@ def execute(filters=None):
 		company=filters.company,
 	)
 
+	hide_accounts = filters.get("hide_account", [])
+	hide_parent_accounts = filters.get("hide_parent_account", [])
+
 	income = get_data(
 		filters.company,
 		"Income",
@@ -45,6 +48,10 @@ def execute(filters=None):
 		ignore_closing_entries=True,
 		ignore_accumulated_values_for_fy=True,
 	)
+
+	if hide_accounts or hide_parent_accounts:
+		income = filter_accounts(income, hide_accounts, hide_parent_accounts)
+		expense = filter_accounts(expense, hide_accounts, hide_parent_accounts)
 
 	net_profit_loss = get_net_profit_loss(
 		income, expense, period_list, filters.company, filters.presentation_currency
@@ -69,6 +76,31 @@ def execute(filters=None):
 
 	return columns, data, None, None, None, None
 
+def filter_accounts(data, hide_accounts, hide_parent_accounts):
+	if not data:
+		return data
+	
+	filtered_data = []
+	for row in data:
+		account = row.get("account")
+		parent_account = row.get("parent_account")
+
+		if account and account in hide_accounts:
+			continue
+
+		if parent_account and parent_account in hide_parent_accounts:
+					continue
+		
+		is_child_of_hidden_parent = False
+		for hidden_parent in hide_parent_accounts:
+			if account and hidden_parent in account:  # Check if parent is part of account hierarchy
+				is_child_of_hidden_parent = True
+				break
+
+		if not is_child_of_hidden_parent:
+			filtered_data.append(row)
+
+	return filtered_data
 
 def get_report_summary(
 	period_list, periodicity, income, expense, net_profit_loss, currency, filters, consolidated=False
