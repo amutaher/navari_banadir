@@ -72,7 +72,7 @@ def process_shipping_sync(doc):
             inv.parenttype,
             inv.parent,
             values_to_update,
-            update_modified=False
+            update_modified=True
         )
 
         frappe.logger().info(f"Updated shipping details in {inv.parenttype} {inv.parent}")
