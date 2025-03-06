@@ -8,6 +8,9 @@ from erpnext.accounts.utils import get_fiscal_year
 import frappe
 from frappe.utils import flt, getdate, add_months
 
+from frappe.query_builder import DocType
+
+
 def execute(filters=None):
     if not filters:
         filters = {}
@@ -61,22 +64,7 @@ def append_profit_loss_row(data, company):
     income_total = 0
     expense_total = 0
     total_income, total_expense, profit = calculate_totals(data, company)
-    # for row in data:
-    #     account_doc = frappe.get_doc("Account", row["account"])
-    #     if account_doc.root_type == "Income":
-    #         for key in row:
-    #             if key not in ["account", "account_name"]:
-    #                 profit_row[key] = profit_row.get(key, 0) + row.get(key, 0)
-    #                 income_total += row[key]
-    #     elif account_doc.root_type == "Expense":
-    #         for key in row:
-    #             if key not in ["account", "account_name"]:
-    #                 profit_row[key] = (profit_row.get(key, 0) or 0) - (row.get(key, 0) or 0)
-
-
-    #                 expense_total += row[key]
-    
-    # profit_row["total"] = income_total - expense_total
+  
     profit_row["total"] = total_income - total_expense
     data.append(profit_row)
     return data
@@ -130,7 +118,6 @@ def get_data(company, from_date, to_date, filters=None, presentation_currency=No
     
     gl_entries_by_account = get_gl_entries_by_account(company, from_date, to_date)
     periods = generate_periods(from_date, to_date, periodicity)
-    
     for account in accounts:
         row = {"account": account.name, "account_name": account.account_name,"currency":presentation_currency, "total": 0}
         
@@ -139,9 +126,9 @@ def get_data(company, from_date, to_date, filters=None, presentation_currency=No
         
         for entry in gl_entries_by_account.get(account.name, []):
             posting_period = get_period_label(entry["posting_date"], periodicity)
-            
+
             # Fix: Income should be positive, Expense should be positive
-            amount = entry["credit"] if account.root_type == "Income" else -entry["debit"]
+            amount =  entry["credit"] if account.root_type == "Income" else entry["debit"] - entry["credit"]
             
             if presentation_currency:
                 amount = convert_to_presentation_currency(amount, presentation_currency)
@@ -154,19 +141,17 @@ def get_data(company, from_date, to_date, filters=None, presentation_currency=No
 
         if row["total"] or filters.get("show_zero_values"):
             data.append(row)
-    
+    # frappe.throw(str(data))
     return data
 
 def calculate_totals(data, company):
     total_income = 0
     total_expense = 0
-    
-    for row in data:
-        account_doc = frappe.get_doc("Account", row["account"])
-        if account_doc.root_type == "Income":
-            total_income += row["total"]
-        elif account_doc.root_type == "Expense":
-            total_expense += row["total"]
+    # frappe.throw(str(data))
+    accounts_dict = {a.name: a.root_type for a in get_accounts(company)}
+    total_income = sum(row["total"] for row in data if accounts_dict.get(row["account"]) == "Income")
+    total_expense = sum(row["total"] for row in data if accounts_dict.get(row["account"]) == "Expense")
+    # frappe.throw(str(total_expense))
     
     profit = total_income - total_expense
     return total_income, total_expense, profit
@@ -204,24 +189,48 @@ def get_profit_loss_chart(total_income, total_expense, profit, currency):
     }
 
 
-def get_gl_entries_by_account(company, from_date, to_date):
-    gl_entries = frappe.db.sql("""
-        SELECT account, debit, credit, posting_date
-        FROM `tabGL Entry`
-        WHERE company=%s AND posting_date BETWEEN %s AND %s
-    """, (company, from_date, to_date), as_dict=True)
-    
+def get_gl_entries_by_account(company, from_date, to_date, ignore_opening_entries=False):
+    gl_entry = DocType("GL Entry")
+
+    query = (
+        frappe.qb.from_(gl_entry)
+        .select(
+            gl_entry.account,
+            gl_entry.debit,
+            gl_entry.credit,
+            gl_entry.debit_in_account_currency,
+            gl_entry.credit_in_account_currency,
+            gl_entry.account_currency,
+            gl_entry.posting_date,
+            gl_entry.is_opening,
+            gl_entry.fiscal_year
+        )
+        .where(gl_entry.company == company)
+        .where(gl_entry.posting_date.between(from_date, to_date))
+        .where(gl_entry.is_cancelled == 0)
+    )
+
+    if ignore_opening_entries:
+        query = query.where(gl_entry.is_opening == "No")
+
+    gl_entries = query.run(as_dict=True)
+
+    # Group entries by account
     gl_entries_by_account = {}
     for entry in gl_entries:
-        gl_entries_by_account.setdefault(entry.account, []).append(entry)
-    
+        gl_entries_by_account.setdefault(entry["account"], []).append(entry)
+    # frappe.throw(str(gl_entries))
     return gl_entries_by_account
+
 
 def get_accounts(company):
     return frappe.db.sql("""
-        SELECT name, account_name, root_type FROM `tabAccount`
+        SELECT name,account_name, root_type FROM `tabAccount`
         WHERE company=%s
+        AND root_type IN ('Income', 'Expense')  # Only get relevant accounts
     """, (company,), as_dict=True)
+
+
 
 def get_period_label(posting_date, periodicity):
     date_obj = getdate(posting_date)
