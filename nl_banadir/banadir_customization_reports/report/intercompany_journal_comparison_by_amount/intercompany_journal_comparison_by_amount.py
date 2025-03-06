@@ -1001,22 +1001,32 @@ class InterCompanyPartiesMatchReport:
                             journal.get("voucher_type") != "Opening Entry"
                             and amount_journal.get("voucher_type") != "Opening Entry"
                         ):
+                            date_difference = abs(
+                                (
+                                    journal.get("reference_journal_posting_date")
+                                    - amount_journal.get("party_journal_posting_date")
+                                ).days
+                            )
                             if (
-                                (journal.get("reference_company_debit") > 0)
-                                and (
-                                    journal.get("reference_company_debit")
-                                    == amount_journal.get(
-                                        "representative_company_credit"
+                                (
+                                    (journal.get("reference_company_debit") > 0)
+                                    and (
+                                        journal.get("reference_company_debit")
+                                        == amount_journal.get(
+                                            "representative_company_credit"
+                                        )
                                     )
                                 )
-                            ) or (
-                                (journal.get("reference_company_credit") > 0)
-                                and (
-                                    journal.get("reference_company_credit")
-                                    == amount_journal.get(
-                                        "representative_company_debit"
+                                or (
+                                    (journal.get("reference_company_credit") > 0)
+                                    and (
+                                        journal.get("reference_company_credit")
+                                        == amount_journal.get(
+                                            "representative_company_debit"
+                                        )
                                     )
                                 )
+                                and date_difference == 3
                             ):
                                 if amount_journal not in matched_amount_journals:
                                     merged_journal = copy.deepcopy(journal)
@@ -1036,6 +1046,7 @@ class InterCompanyPartiesMatchReport:
                                     merged_journal["party_journal_posting_date"] = (
                                         amount_journal.get("party_journal_posting_date")
                                     )
+                                    merged_journal["matched"] = 1
                                     self.data.append(merged_journal)
                                     matched_amount_journals.append(amount_journal)
                                     matched = True
@@ -1097,7 +1108,11 @@ class InterCompanyPartiesMatchReport:
                         self.data.append({**item, **opening_entry})
 
                 sorted_data = sorted(
-                    self.data, key=lambda x: x.get("voucher_type") != "Opening Entry"
+                    self.data,
+                    key=lambda x: (
+                        x.get("voucher_type") != "Opening Entry",
+                        not x.get("matched"),
+                    ),
                 )
                 self.data = sorted_data
 

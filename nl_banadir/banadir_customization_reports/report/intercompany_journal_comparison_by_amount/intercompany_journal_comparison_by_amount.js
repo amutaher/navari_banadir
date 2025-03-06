@@ -64,7 +64,7 @@ frappe.query_reports["Intercompany Journal Comparison By Amount"] = {
       fieldtype: "Date",
       width: "80",
       reqd: 1,
-      default: frappe.datetime.add_days(frappe.datetime.get_today(), -3),
+      default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
     },
     {
       fieldname: "to_date",
