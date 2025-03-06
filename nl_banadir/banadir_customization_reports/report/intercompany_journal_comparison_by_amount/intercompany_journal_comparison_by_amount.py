@@ -1026,7 +1026,7 @@ class InterCompanyPartiesMatchReport:
                                         )
                                     )
                                 )
-                                and date_difference == 3
+                                and date_difference <= 3
                             ):
                                 if amount_journal not in matched_amount_journals:
                                     merged_journal = copy.deepcopy(journal)
