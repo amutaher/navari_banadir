@@ -255,6 +255,32 @@ function get_filters() {
 			options: erpnext.get_presentation_currency_list(),
 		},
 		{
+			"fieldname":"hide_account",
+			"label": __("Hide Account"),
+			"fieldtype": "MultiSelectList",
+			"options": "Account",
+			get_data: function (txt) {
+				return frappe.db.get_link_options("Account", txt, {
+					company: frappe.query_report.get_filter_value("company"),
+					root_type: "Expense",
+					is_group: 0,
+				});
+			},
+		},
+		{
+			"fieldname":"hide_parent_account",
+			"label": __("Hide Parent Account"),
+			"fieldtype": "MultiSelectList",
+			"options": "Account",
+			get_data: function (txt) {
+				return frappe.db.get_link_options("Account", txt, {
+					company: frappe.query_report.get_filter_value("company"),
+					root_type: "Expense",
+					is_group: 1,
+				});
+			},
+		},
+		{
 			fieldname: "cost_center",
 			label: __("Cost Center"),
 			fieldtype: "MultiSelectList",
