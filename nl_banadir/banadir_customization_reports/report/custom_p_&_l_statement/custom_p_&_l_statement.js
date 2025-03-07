@@ -44,6 +44,19 @@ frappe.query_reports["Custom P & L Statement"] = {
             label: __("Cost Center"),
             fieldtype: "Link",
             options: "Cost Center"
+        },
+        {
+            fieldname: "finance_year",
+            label: __("Finance Year"),
+            fieldtype: "Link",
+            options: "Finance Year"
+        },
+        {
+            fieldname: "fiscal_year",
+            label: __("Fiscal Year"),
+            fieldtype: "Link",
+            options: "Fiscal Year"
+            
         }
     ]
 };
