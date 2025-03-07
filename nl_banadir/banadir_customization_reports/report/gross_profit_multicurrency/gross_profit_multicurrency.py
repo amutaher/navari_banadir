@@ -1349,7 +1349,6 @@ def get_total_quantity_for_customer(customer, filters):
 	start_date = filters.get("from_date")
 	end_date = filters.get("to_date")
 
-	# Step 1: Fetch Sales Invoice Items (excluding returns)
 	sales_invoice_items = frappe.get_all("Sales Invoice Item",
 		filters={
 			"parent": ["in", frappe.db.get_all("Sales Invoice",
@@ -1366,7 +1365,6 @@ def get_total_quantity_for_customer(customer, filters):
 		fields=["item_code", "stock_qty"]
 	)
 
-	# Step 2: Fetch Delivery Note Items (excluding returns)
 	delivery_note_items = frappe.get_all("Delivery Note Item",
 		filters={
 			"parent": ["in", frappe.db.get_all("Delivery Note",
@@ -1382,18 +1380,15 @@ def get_total_quantity_for_customer(customer, filters):
 		fields=["item_code", "stock_qty"]
 	)
 
-	# Step 3: Calculate Total Quantity from Sales Invoices & Delivery Notes
 	for item in sales_invoice_items + delivery_note_items:
 		qty = item.get("stock_qty", 0)
 
-		# Apply UOM conversion if applicable
 		if filters.get("alternative_uom"):
 			conversion_factor = get_conversion_factor(item["item_code"], filters["alternative_uom"])
 			qty /= conversion_factor
 
 		total_qty += qty
 
-	# Step 4: Fetch Returned Items from Sales Invoice Returns
 	return_invoice_items = frappe.get_all("Sales Invoice Item",
 		filters={
 			"parent": ["in", frappe.db.get_all("Sales Invoice",
@@ -1409,7 +1404,6 @@ def get_total_quantity_for_customer(customer, filters):
 		fields=["item_code", "stock_qty"]
 	)
 
-	# Step 5: Fetch Returned Items from Delivery Note Returns
 	return_delivery_note_items = frappe.get_all("Delivery Note Item",
 		filters={
 			"parent": ["in", frappe.db.get_all("Delivery Note",
@@ -1425,11 +1419,9 @@ def get_total_quantity_for_customer(customer, filters):
 		fields=["item_code", "stock_qty"]
 	)
 
-	# Step 6: Subtract the returned quantities
 	for item in return_invoice_items + return_delivery_note_items:
 		qty = item.get("stock_qty", 0)
 
-		# Apply UOM conversion if applicable
 		if filters.get("alternative_uom"):
 			conversion_factor = get_conversion_factor(item["item_code"], filters["alternative_uom"])
 			qty /= conversion_factor
