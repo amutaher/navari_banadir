@@ -317,7 +317,7 @@ def get_columns(group_wise_columns, filters):
 				"label": _("Qty"),
 				"fieldname": "qty",
 				"fieldtype": "Float",
-				"width": 80,
+				"width": 100,
 			},
 			
 			"base_rate": {
@@ -1304,34 +1304,34 @@ def convert_currency_columns(data, filters):
 
 
 def convert_alternative_uom(data, filters):
-    alternative_uom = filters.get('alternative_uom')
-    group_by = filters.get('group_by')
-    
-    for row in data:
-        if group_by == 'Invoice':
-            item_code = row.get('item_code')
-            
-            if item_code and 'qty' in row:
-                qty = row['qty']
-                if isinstance(qty, (int, float)):
-                    conversion_factor = get_conversion_factor(item_code, alternative_uom)
-                    row['qty'] = qty / conversion_factor
-                    row['valuation_rate'] *= conversion_factor
-                    row['avg._selling_rate'] *= conversion_factor
+	alternative_uom = filters.get('alternative_uom')
+	group_by = filters.get('group_by')
+	
+	for row in data:
+		if group_by == 'Invoice':
+			item_code = row.get('item_code')
+			
+			if item_code and 'qty' in row:
+				qty = row['qty']
+				if isinstance(qty, (int, float)):
+					conversion_factor = get_conversion_factor(item_code, alternative_uom)
+					row['qty'] = qty / conversion_factor
+					row['valuation_rate'] *= conversion_factor
+					row['avg._selling_rate'] *= conversion_factor
 
 
-        
-        elif group_by == 'Item Code':
-            if len(row) > 4: 
-                qty = row[4]
-                
-                if isinstance(qty, (int, float)):
-                    conversion_factor = get_conversion_factor(row[0], alternative_uom)
-                    row[4] = qty / conversion_factor
-                    row[5] *= conversion_factor
-                    row[6] *= conversion_factor
-    
-    return data
+		
+		elif group_by == 'Item Code':
+			if len(row) > 4: 
+				qty = row[4]
+				
+				if isinstance(qty, (int, float)):
+					conversion_factor = get_conversion_factor(row[0], alternative_uom)
+					row[4] = qty / conversion_factor
+					row[5] *= conversion_factor
+					row[6] *= conversion_factor
+	
+	return data
 
 
 def get_conversion_factor(item_code, alternative_uom):
@@ -1340,98 +1340,112 @@ def get_conversion_factor(item_code, alternative_uom):
 
 
 def get_total_quantity_for_customer(customer, filters):
-    """
-    Fetches all Sales Invoice Items linked to a given customer,
-    applies UOM conversion if needed, and sums up the total quantity.
-    Subtracts returned items (credit notes) from the total quantity.
-    """
-    total_qty = 0
-    
-    # Step 1: Get all Sales Invoices for the given customer (excluding credit notes)
-    sales_invoices = frappe.db.get_list("Sales Invoice",
-        filters={"customer": customer, "docstatus": 1, "is_return": 0,  "update_stock": 1},  # Exclude credit notes
-        pluck="name"  
-    )
+	"""
+	Fetches all Sales Invoice and Delivery Note items linked to a given customer,
+	applies UOM conversion if needed, and sums up the total quantity.
+	Subtracts returned items (credit notes) from the total quantity.
+	"""
+	total_qty = 0
+	start_date = filters.get("from_date")
+	end_date = filters.get("to_date")
 
-    # Step 2: Get all Sales Invoice Items linked to those invoices
-    if sales_invoices:
-        items = frappe.get_all("Sales Invoice Item",
-            filters={"parent": ["in", sales_invoices]},
-            fields=["item_code", "qty"]
-        )
-        
-        # Step 3: Sum up the total quantity for regular invoices
-        for item in items:
-            qty = item.get("qty", 0)  # Use .get() to handle missing keys gracefully
-            
-            # Apply UOM conversion only if alternative_uom is provided
-            if filters.get("alternative_uom"):
-                conversion_factor = get_conversion_factor(item["item_code"], filters["alternative_uom"])
-                qty *= conversion_factor 
-            
-            total_qty += qty
-    
-    # Step 4: Get all Credit Notes (returned items) for the given customer
-    credit_notes = frappe.db.get_list("Sales Invoice",
-        filters={"customer": customer, "docstatus": 1, "is_return": 1},  # Only credit notes
-        pluck="name"  
-    )
+	sales_invoice_items = frappe.get_all("Sales Invoice Item",
+		filters={
+			"parent": ["in", frappe.db.get_all("Sales Invoice",
+				filters={
+					"customer": customer,
+					"docstatus": 1,
+					"is_return": 0,
+					"update_stock": 1,
+					"posting_date": ["between", [start_date, end_date]]
+				},
+				pluck="name"
+			)]
+		},
+		fields=["item_code", "stock_qty"]
+	)
 
-    # Step 5: Get all Sales Invoice Items linked to those credit notes
-    if credit_notes:
-        returned_items = frappe.get_all("Sales Invoice Item",
-            filters={"parent": ["in", credit_notes]},
-            fields=["item_code", "qty"]
-        )
-        
-        # Step 6: Subtract the returned quantities from the total quantity
-        for item in returned_items:
-            qty = item.get("qty", 0)  # Use .get() to handle missing keys gracefully
-            
-            # Apply UOM conversion only if alternative_uom is provided
-            if filters.get("alternative_uom"):
-                conversion_factor = get_conversion_factor(item["item_code"], filters["alternative_uom"])
-                qty *= conversion_factor 
-            total_qty -= qty  # Subtract returned quantities
-    
-    return total_qty
+	delivery_note_items = frappe.get_all("Delivery Note Item",
+		filters={
+			"parent": ["in", frappe.db.get_all("Delivery Note",
+				filters={
+					"customer": customer,
+					"docstatus": 1,
+					"is_return": 0,
+					"posting_date": ["between", [start_date, end_date]]
+				},
+				pluck="name"
+			)]
+		},
+		fields=["item_code", "stock_qty"]
+	)
+
+	for item in sales_invoice_items + delivery_note_items:
+		qty = item.get("stock_qty", 0)
+
+		if filters.get("alternative_uom"):
+			conversion_factor = get_conversion_factor(item["item_code"], filters["alternative_uom"])
+			qty /= conversion_factor
+
+		total_qty += qty
+
+	return_invoice_items = frappe.get_all("Sales Invoice Item",
+		filters={
+			"parent": ["in", frappe.db.get_all("Sales Invoice",
+				filters={
+					"customer": customer,
+					"docstatus": 1,
+					"is_return": 1,
+					"posting_date": ["between", [start_date, end_date]]
+				},
+				pluck="name"
+			)]
+		},
+		fields=["item_code", "stock_qty"]
+	)
+
+	return_delivery_note_items = frappe.get_all("Delivery Note Item",
+		filters={
+			"parent": ["in", frappe.db.get_all("Delivery Note",
+				filters={
+					"customer": customer,
+					"docstatus": 1,
+					"is_return": 1,
+					"posting_date": ["between", [start_date, end_date]]
+				},
+				pluck="name"
+			)]
+		},
+		fields=["item_code", "stock_qty"]
+	)
+
+	for item in return_invoice_items + return_delivery_note_items:
+		qty = item.get("stock_qty", 0)
+
+		if filters.get("alternative_uom"):
+			conversion_factor = get_conversion_factor(item["item_code"], filters["alternative_uom"])
+			qty /= conversion_factor
+
+		total_qty -= qty
+
+	return total_qty
+
 
 
 def update_quantity_with_uom_conversion(data, filters):
-    """
-    Modifies quantity in the dataset based on an alternative UOM conversion.
-    
-    :param data: List of lists containing customer-wise totals.
-    :param filters: Dictionary containing filters (e.g., alternative_uom).
-    :return: Updated data with converted quantities.
-    """
-    # Debug: Print the input data
-    # frappe.msgprint(f"Data: {data}")
-    
-    # Handle None or empty data
-    if not data:
-        return []  # Return an empty list if data is None or empty
-    
-    # Filter out None rows
-    data = [row for row in data if row is not None]
-    
-    # Extract customer names from the data
-    customers = [row[0] for row in data]
-    
-    # Debug: Print the list of customers
-    # frappe.msgprint(f"Customers: {customers}")
-    
-    # Update quantities for each customer
-    for customer in customers:
-        # Get the total quantity for the customer (with UOM conversion if applicable)
-        total_qty = get_total_quantity_for_customer(customer, filters)
-        
-        # Update the quantity field in the data
-        for row in data:
-            if row[0] == customer:
-                row[2] = total_qty  # Update the quantity field (assuming it's at index 2)
-    
-    # Debug: Print the updated data
-    # frappe.msgprint(f"Updated Data: {data}")
-    
-    return data
+	"""
+	Modifies quantity in the dataset based on an alternative UOM conversion.
+	"""
+	if not data:
+		return []
+
+	data = [row for row in data if row is not None]
+	customers = [row[0] for row in data]
+	for customer in customers:
+		total_qty = get_total_quantity_for_customer(customer, filters)
+		
+		for row in data:
+			if row[0] == customer:
+				row[2] = total_qty  
+	
+	return data
