@@ -170,7 +170,7 @@ def get_data(filters):
             PurchaseInvoice.conversion_rate.as_("conversion_rate"),
             LandedCostTaxesAndCharges.expense_account.as_("expense_account"),
             PurchaseInvoice.custom_container_no.as_("container_no"),
-            PurchaseInvoice.custom_bill_of_lading.as_("bl_number"),
+            PurchaseInvoice.custom_bill_of_landing.as_("bl_number"),
             LandedCostTaxesAndCharges.base_amount.as_("amount"),
             LandedCostTaxesAndCharges.base_amount.as_("expense_booked"),
             LandedCostTaxesAndCharges.description.as_("description")
@@ -195,7 +195,7 @@ def get_data(filters):
             PurchaseInvoice.conversion_rate.as_("conversion_rate"),
             ConstantColumn("").as_("expense_account"),
             PurchaseInvoice.custom_container_no.as_("container_no"),
-            PurchaseInvoice.custom_bill_of_lading.as_("bl_number"),
+            PurchaseInvoice.custom_bill_of_landing.as_("bl_number"),
             ConstantColumn(int(0)).as_("amount"),
             ConstantColumn(int(0)).as_("expense_booked"),
             ConstantColumn("").as_("description")
