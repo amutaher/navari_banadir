@@ -16,10 +16,15 @@ def get_columns():
     return [
         {"label": "Sales Order No", "fieldname": "sales_order_no", "fieldtype": "Link", "options": "Sales Order", "width": 150},
         {"label": "Production Plan No", "fieldname": "production_plan_no", "fieldtype": "Link", "options": "Production Plan", "width": 150},
+                {"label": "PP Status", "fieldname": "status", "fieldtype": "Data", "width": 100},
+
         {"label": "Finished Goods Work Order No", "fieldname": "finished_goods_work_order_no", "fieldtype": "Link", "options": "Work Order", "width": 200},
+                {"label": "FG Status", "fieldname": "fg_status", "fieldtype": "Data", "width": 100},
+
         {"label": "Insole Work Order", "fieldname": "insole_work_order", "fieldtype": "Link", "options": "Work Order", "width": 150},
+                {"label": "Insole Status", "fieldname": "i_status", "fieldtype": "Data", "width": 100},
+
         {"label": "Sequence No (Finished Goods)", "fieldname": "sequence_no", "fieldtype": "Data", "width": 150},  # Added column for sequence number
-        {"label": "Status", "fieldname": "status", "fieldtype": "Data", "width": 100},
         {"label": "Item Name (Finished Goods)", "fieldname": "finished_goods_item", "fieldtype": "Link","options":"Item", "width": 200},
         {"label": "Item Name (Insole)", "fieldname": "insole_item","fieldtype": "Link","options":"Item", "width": 200},
         {"label": "Item Name (Upper)", "fieldname": "upper_item", "fieldtype": "Link","options":"Item", "width": 200},
@@ -71,6 +76,8 @@ def get_data(filters):
             fg_work_order.name AS finished_goods_work_order_no,
             insole_work_order.name AS insole_work_order,
             fg_work_order.custom_seq_id AS sequence_no,  # Fetch the custom_seq_id for finished goods work order
+            fg_work_order.status AS fg_status,
+            insole_work_order.status AS i_status,
             pp.status AS status,
             ppi.item_code AS finished_goods_item,
             psa.production_item AS insole_item,
