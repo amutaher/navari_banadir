@@ -103,6 +103,7 @@ def execute(filters=None):
 				"buying_amount",
 				"gross_profit",
 				"gross_profit_percent",
+				
 			],
 			"customer_group": [
 				"customer_group",
@@ -291,6 +292,7 @@ def get_columns(group_wise_columns, filters):
 				"fieldtype": "Data",
 				"width": 100,
 			},
+   
 			"warehouse": {
 				"label": _("Warehouse"),
 				"fieldname": "warehouse",
@@ -436,7 +438,7 @@ def get_columns(group_wise_columns, filters):
 			  "fieldname":"currency",
 			  "fieldtype":"Link",
 			  "options":"Currency",
-			  "hidden":1,
+			#   "hidden":1,
 			},
 			
 		}
@@ -1268,6 +1270,7 @@ def convert_list_entries(entry, currency_indices, from_currency, to_currency, da
 
 
 def convert_currency_columns(data, filters):
+	
 	"""
 	Main function to convert currency columns based on the data format and filters.
 	"""
@@ -1300,6 +1303,7 @@ def convert_currency_columns(data, filters):
 				entry, currency_indices, from_currency, to_currency, date
 			)
 			entry.append(from_currency)
+	# frappe.throw(str(data))
 	return data
 
 
@@ -1434,7 +1438,8 @@ def get_total_quantity_for_customer(customer, filters):
 
 def update_quantity_with_uom_conversion(data, filters):
 	"""
-	Modifies quantity in the dataset based on an alternative UOM conversion.
+	Modifies quantity in the dataset based on an alternative UOM conversion
+	and updates the currency.
 	"""
 	if not data:
 		return []
@@ -1446,6 +1451,7 @@ def update_quantity_with_uom_conversion(data, filters):
 		
 		for row in data:
 			if row[0] == customer:
-				row[2] = total_qty  
-	
+				row[2] = total_qty  # Update quantity
+				row[-2] = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
+
 	return data
