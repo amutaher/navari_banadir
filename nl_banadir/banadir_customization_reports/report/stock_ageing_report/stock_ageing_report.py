@@ -19,6 +19,7 @@ def execute(filters: Filters = None) -> tuple:
 	columns = get_columns(filters)
 
 	item_details = FIFOSlots(filters).generate()
+	# print(item_details)
 	data = format_report_data(filters, item_details, to_date)
 
 	chart_data = get_chart_data(data, filters)
@@ -234,6 +235,8 @@ class FIFOSlots:
 				'details' -> Dict: ** item details **,
 				'fifo_queue' -> List: ** list of lists containing entries/slots for existing stock,
 						consumed/updated and maintained via FIFO. **
+				'outgoing_queue' -> List: ** list of lists containing entries/slots for sales record,
+						consumed/updated and maintained via FIFO. **
 		}
 		"""
 
@@ -269,7 +272,7 @@ class FIFOSlots:
 				if d.actual_qty > 0:
 					self.__compute_incoming_stock(d, fifo_queue, transferred_item_key, serial_nos)
 				else:
-					self.__compute_outgoing_stock(d, fifo_queue, transferred_item_key, serial_nos)
+					self.__compute_outgoing_stock(d, fifo_queue, transferred_item_key, serial_nos, key)
 
 				self.__update_balances(d, key)
 
@@ -286,7 +289,7 @@ class FIFOSlots:
 		"Initialise keys and FIFO Queue."
 
 		key = (row.name, row.warehouse)
-		self.item_details.setdefault(key, {"details": row, "fifo_queue": []})
+		self.item_details.setdefault(key, {"details": row, "fifo_queue": [], "outgoing_queue": []})
 		fifo_queue = self.item_details[key]["fifo_queue"]
 
 		transferred_item_key = (row.voucher_no, row.name, row.warehouse)
@@ -320,10 +323,20 @@ class FIFOSlots:
 					self.serial_no_batch_purchase_details.setdefault(serial_no, row.posting_date)
 					fifo_queue.append([serial_no, row.posting_date])
 
-	def __compute_outgoing_stock(self, row: dict, fifo_queue: list, transfer_key: tuple, serial_nos: list):
+	def __compute_outgoing_stock(self, row: dict, fifo_queue: list, transfer_key: tuple, serial_nos: list, key: tuple):
 		"Update FIFO Queue on outward stock."
+		if row.voucher_type == "Stock Reconciliation":
+			return
+		
 		if serial_nos:
+			removed_entries = [entry for entry in fifo_queue if entry[0] in serial_nos]
 			fifo_queue[:] = [serial_no for serial_no in fifo_queue if serial_no[0] not in serial_nos]
+			for entry in removed_entries:
+				self.item_details[key]['outgoing_queue'].append({
+					'quantity': 1,
+					'incoming_date': entry[1],
+					'outgoing_date': row.posting_date
+				})
 			return
 
 		qty_to_pop = abs(row.actual_qty)
@@ -333,7 +346,13 @@ class FIFOSlots:
 				# qty to pop >= slot qty
 				# if +ve and not enough or exactly same balance in current slot, consume whole slot
 				qty_to_pop -= flt(slot[0])
-				self.transferred_item_details[transfer_key].append(fifo_queue.pop(0))
+				popped_slot = fifo_queue.pop(0)
+				self.transferred_item_details[transfer_key].append(popped_slot)
+				self.item_details[key]['outgoing_queue'].append({
+					'quantity': popped_slot[0],
+					'incoming_date': popped_slot[1],
+					'outgoing_date': row.posting_date
+				})
 			elif not fifo_queue:
 				# negative stock, no balance but qty yet to consume
 				fifo_queue.append([-(qty_to_pop), row.posting_date])
@@ -342,8 +361,15 @@ class FIFOSlots:
 			else:
 				# qty to pop < slot qty, ample balance
 				# consume actual_qty from first slot
+				consumed_qty = qty_to_pop
+				incoming_date = slot[1]
 				slot[0] = flt(slot[0]) - qty_to_pop
 				self.transferred_item_details[transfer_key].append([qty_to_pop, slot[1]])
+				self.item_details[key]['outgoing_queue'].append({
+					'quantity': consumed_qty,
+					'incoming_date': incoming_date,
+					'outgoing_date': row.posting_date
+				})
 				qty_to_pop = 0
 
 	def __adjust_incoming_transfer_qty(self, transfer_data: dict, fifo_queue: list, row: dict):
@@ -394,6 +420,7 @@ class FIFOSlots:
 					{
 						"details": frappe._dict(),
 						"fifo_queue": [],
+						"outgoing_queue": [],
 						"qty_after_transaction": 0.0,
 						"total_qty": 0.0,
 					},
@@ -401,6 +428,7 @@ class FIFOSlots:
 			item_row = item_aggregated_data.get(item)
 			item_row["details"].update(row["details"])
 			item_row["fifo_queue"].extend(row["fifo_queue"])
+			item_row["outgoing_queue"].extend(row["outgoing_queue"])
 			item_row["qty_after_transaction"] += flt(row["qty_after_transaction"])
 			item_row["total_qty"] += flt(row["total_qty"])
 			item_row["has_serial_no"] = row["has_serial_no"]
