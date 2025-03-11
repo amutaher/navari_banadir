@@ -28,7 +28,7 @@ def execute(filters: Filters = None) -> tuple:
 
 
 def format_report_data(filters: Filters, item_details: dict, to_date: str) -> list[dict]:
-	"Returns ordered, formatted data with ranges."
+	"Returns ordered, formatted data with ranges based on fifo_queue or outgoing_queue."
 	_func = itemgetter(1)
 	data = []
 
@@ -42,15 +42,27 @@ def format_report_data(filters: Filters, item_details: dict, to_date: str) -> li
 		earliest_age, latest_age = 0, 0
 		details = item_dict["details"]
 
-		fifo_queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
+		if filters.get("period_for_qty_sold"):
+			queue = sorted(
+                [entry for entry in item_dict["outgoing_queue"] if entry.get("outgoing_date")],
+                key=lambda x: x["outgoing_date"]
+            )			
+			date_field = "outgoing_date"
+			qty_field = "quantity"
+		else:
+			queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
+			date_field = 1  # Index for posting_date in fifo_queue
+			qty_field = 0  # Index for qty in fifo_queue
 
-		if not fifo_queue:
+		# fifo_queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
+
+		if not queue:
 			continue
 
-		average_age = get_average_age(fifo_queue, to_date)
-		earliest_age = date_diff(to_date, fifo_queue[0][1])
-		latest_age = date_diff(to_date, fifo_queue[-1][1])
-		range_values = get_range_age(filters, fifo_queue, to_date, item_dict)
+		average_age = get_average_age(queue, to_date, date_field, qty_field)
+		earliest_age = date_diff(to_date, queue[0][date_field])
+		latest_age = date_diff(to_date, queue[-1][date_field])
+		range_values = get_range_age(filters, queue, to_date, item_dict, date_field, qty_field)
 
 		row = [details.name, details.item_name, details.description, details.item_group, details.brand]
 
@@ -79,14 +91,15 @@ def format_report_data(filters: Filters, item_details: dict, to_date: str) -> li
 	return data
 
 
-def get_average_age(fifo_queue: list, to_date: str) -> float:
+def get_average_age(queue: list, to_date: str, date_field: str | int, qty_field: str | int) -> float:
 	batch_age = age_qty = total_qty = 0.0
-	for batch in fifo_queue:
-		batch_age = date_diff(to_date, batch[1])
+	for batch in queue:
+		batch_age = date_diff(to_date, batch[date_field])
 
-		if isinstance(batch[0], int | float):
-			age_qty += batch_age * batch[0]
-			total_qty += batch[0]
+		qty = batch[qty_field]
+		if isinstance(qty, (int, float)):
+			age_qty += batch_age * qty
+			total_qty += qty
 		else:
 			age_qty += batch_age * 1
 			total_qty += 1
@@ -94,13 +107,13 @@ def get_average_age(fifo_queue: list, to_date: str) -> float:
 	return flt(age_qty / total_qty, 2) if total_qty else 0.0
 
 
-def get_range_age(filters: Filters, fifo_queue: list, to_date: str, item_dict: dict) -> list:
+def get_range_age(filters: Filters, queue: list, to_date: str, item_dict: dict, date_field: str | int, qty_field: str | int) -> list:
 	precision = cint(frappe.db.get_single_value("System Settings", "float_precision", cache=True))
 	range_values = [0.0] * (len(filters.ranges) + 1)
 
-	for item in fifo_queue:
-		age = flt(date_diff(to_date, item[1]))
-		qty = flt(item[0]) if not item_dict["has_serial_no"] else 1.0
+	for item in queue:
+		age = flt(date_diff(to_date, item[date_field]))
+		qty = flt(item[qty_field]) if not item_dict["has_serial_no"] else 1.0
 
 		for i, age_limit in enumerate(filters.ranges):
 			if age <= flt(age_limit):
@@ -154,18 +167,23 @@ def get_columns(filters: Filters) -> list[dict]:
 
 	qty_fieldtype = "Int" if filters.get("remove_precision") else "Float"
 
+	# Adjust labels based on the queue being displayed
+	qty_label = _("Available Qty") if not filters.get("period_for_qty_sold") else _("Consumed Qty")
+	age_label = _("Average Age") if not filters.get("period_for_qty_sold") else _("Average Age of Consumption")
+	earliest_label = _("Earliest") if not filters.get("period_for_qty_sold") else _("Earliest Consumption")
+	latest_label = _("Latest") if not filters.get("period_for_qty_sold") else _("Latest Consumption")
 
 	columns.extend(
 		[
-			{"label": _("Available Qty"), "fieldname": "qty", "fieldtype": qty_fieldtype, "width": 100},
-			{"label": _("Average Age"), "fieldname": "average_age", "fieldtype": qty_fieldtype, "width": 100},
+			{"label": qty_label, "fieldname": "qty", "fieldtype": qty_fieldtype, "width": 100},
+			{"label": age_label, "fieldname": "average_age", "fieldtype": qty_fieldtype, "width": 100},
 		]
 	)
 	columns.extend(range_columns)
 	columns.extend(
 		[
-			{"label": _("Earliest"), "fieldname": "earliest", "fieldtype": "Int", "width": 80},
-			{"label": _("Latest"), "fieldname": "latest", "fieldtype": "Int", "width": 80},
+			{"label": earliest_label, "fieldname": "earliest", "fieldtype": "Int", "width": 80},
+			{"label": latest_label, "fieldname": "latest", "fieldtype": "Int", "width": 80},
 			{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 100},
 		]
 	)
@@ -191,8 +209,10 @@ def get_chart_data(data: list, filters: Filters) -> dict:
 		labels.append(row[0])
 		datapoints.append(row[6])
 
+	chart_title = _("Average Age") if not filters.get("period_for_qty_sold") else _("Average Age of Consumption")
+
 	return {
-		"data": {"labels": labels, "datasets": [{"name": _("Average Age"), "values": datapoints}]},
+		"data": {"labels": labels, "datasets": [{"name": chart_title, "values": datapoints}]},
 		"type": "bar",
 	}
 
