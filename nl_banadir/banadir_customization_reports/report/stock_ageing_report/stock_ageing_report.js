@@ -77,6 +77,12 @@ frappe.query_reports["Stock Ageing Report"] = {
             fieldtype: "Check",
             default: 1,
         },
+		{
+			fieldname: "period_for_qty_sold",
+			label: __("Period For Qty Sold"),
+			fieldtype: "Check",
+			default: 0,
+		}
 	],
 
 	formatter: function (value, row, column, data, default_formatter) {
