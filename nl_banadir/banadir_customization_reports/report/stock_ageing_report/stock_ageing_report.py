@@ -19,7 +19,7 @@ def execute(filters: Filters = None) -> tuple:
 	columns = get_columns(filters)
 
 	item_details = FIFOSlots(filters).generate()
-	print(item_details)
+	# print(item_details)
 	data = format_report_data(filters, item_details, to_date)
 
 	chart_data = get_chart_data(data, filters)
@@ -191,7 +191,7 @@ def get_columns(filters: Filters) -> list[dict]:
 	qty_fieldtype = "Int" if filters.get("remove_precision") else "Float"
 
 	# Adjust labels based on the queue being displayed
-	qty_label = _("Available Qty") if not filters.get("period_for_qty_sold") else _("Consumed Qty")
+	qty_label = _("Available Qty")
 	age_label = _("Average Age") if not filters.get("period_for_qty_sold") else _("Average Age of Consumption")
 	earliest_label = _("Earliest") if not filters.get("period_for_qty_sold") else _("Earliest Consumption")
 	latest_label = _("Latest") if not filters.get("period_for_qty_sold") else _("Latest Consumption")
