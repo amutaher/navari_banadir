@@ -67,6 +67,7 @@ frappe.query_reports["Custom P & L Statement"] = {
 function update_period_dates(filters) {
     let finance_year = frappe.query_report.get_filter_value("finance_year");
     let company = frappe.query_report.get_filter_value("company");
+
     if (finance_year && company) {
         frappe.call({
             method: "frappe.client.get_list",
@@ -76,25 +77,31 @@ function update_period_dates(filters) {
                     custom_finance_year: finance_year,
                     company: company
                 },
-                fields: ["period_start_date", "period_end_date"],
-                limit_page_length: 1
+                fields: ["period_start_date", "period_end_date"]
             },
             callback: function (response) {
                 if (response.message && response.message.length > 0) {
-                    let record = response.message[0];
-                    frappe.query_report.set_filter_value("from_date", record.period_start_date);
-                    frappe.query_report.set_filter_value("to_date", record.period_end_date);
+                    let dates = response.message;
+
+                    let from_date = dates.reduce((min, record) => 
+                        record.period_start_date < min ? record.period_start_date : min, dates[0].period_start_date);
+
+                    let to_date = dates.reduce((max, record) => 
+                        record.period_end_date > max ? record.period_end_date : max, dates[0].period_end_date);
+
+                    frappe.query_report.set_filter_value("from_date", from_date);
+                    frappe.query_report.set_filter_value("to_date", to_date);
                 } else {
                     frappe.msgprint({
                         title: __("Not Found"),
                         message: __("No Period Closing Voucher found for the selected Finance Year and Company."),
                         indicator: "red"
                     });
+
                     frappe.query_report.set_filter_value("from_date", "");
                     frappe.query_report.set_filter_value("to_date", "");
                 }
             }
-            
         });
     }
 }

@@ -201,7 +201,7 @@ def calculate_category_total(category_data):
         if "<b>" not in row.get("account", ""):
             total += row.get("total", 0)
     return total
-a
+
 
 def process_account_category(accounts, gl_entries_by_account, periods, presentation_currency, periodicity, filters, root_type):
     """Process a single category of accounts (Income or Expense)"""

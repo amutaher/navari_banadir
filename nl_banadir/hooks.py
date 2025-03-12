@@ -63,6 +63,9 @@ doc_events = {
     "Stock Entry": {
         "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save"
     },
+    "Sales Shipment Cost": {
+        "before_cancel": "nl_banadir.banadir_customization_reports.controllers.sales_shipment_cost.before_cancel",
+    },
 }
 
 # include js, css files in header of desk.html
