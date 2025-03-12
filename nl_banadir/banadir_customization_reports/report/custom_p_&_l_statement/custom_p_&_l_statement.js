@@ -83,14 +83,12 @@ function update_period_dates(filters) {
                 if (response.message && response.message.length > 0) {
                     let dates = response.message;
 
-                    // Get the earliest period_start_date and latest period_end_date
                     let from_date = dates.reduce((min, record) => 
                         record.period_start_date < min ? record.period_start_date : min, dates[0].period_start_date);
 
                     let to_date = dates.reduce((max, record) => 
                         record.period_end_date > max ? record.period_end_date : max, dates[0].period_end_date);
 
-                    // Update report filters
                     frappe.query_report.set_filter_value("from_date", from_date);
                     frappe.query_report.set_filter_value("to_date", to_date);
                 } else {
@@ -100,7 +98,6 @@ function update_period_dates(filters) {
                         indicator: "red"
                     });
 
-                    // Reset the date filters
                     frappe.query_report.set_filter_value("from_date", "");
                     frappe.query_report.set_filter_value("to_date", "");
                 }
