@@ -19,7 +19,7 @@ def execute(filters: Filters = None) -> tuple:
 	columns = get_columns(filters)
 
 	item_details = FIFOSlots(filters).generate()
-	# print(item_details)
+	print(item_details)
 	data = format_report_data(filters, item_details, to_date)
 
 	chart_data = get_chart_data(data, filters)
@@ -36,7 +36,7 @@ def format_report_data(filters: Filters, item_details: dict, to_date: str) -> li
 	precision = cint(frappe.db.get_single_value("System Settings", "float_precision", cache=True))
 
 	for _item, item_dict in item_details.items():
-		if not flt(item_dict.get("total_qty"), precision):
+		if not flt(item_dict.get("total_qty"), precision) and not filters.get("period_for_qty_sold"):
 			continue
 
 		earliest_age, latest_age = 0, 0
@@ -44,24 +44,26 @@ def format_report_data(filters: Filters, item_details: dict, to_date: str) -> li
 
 		if filters.get("period_for_qty_sold"):
 			queue = sorted(
-                [entry for entry in item_dict["outgoing_queue"] if entry.get("outgoing_date")],
-                key=lambda x: x["outgoing_date"]
-            )			
+				[entry for entry in item_dict["outgoing_queue"] if entry.get("outgoing_date")],
+				key=lambda x: x["outgoing_date"]
+			)			
 			date_field = "outgoing_date"
 			qty_field = "quantity"
+			total_qty = sum(entry[qty_field] for entry in queue)
 		else:
 			queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
 			date_field = 1  # Index for posting_date in fifo_queue
 			qty_field = 0  # Index for qty in fifo_queue
+			total_qty = item_dict.get("total_qty")
 
 		# fifo_queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
 
 		if not queue:
 			continue
 
-		average_age = get_average_age(queue, to_date, date_field, qty_field)
-		earliest_age = date_diff(to_date, queue[0][date_field])
-		latest_age = date_diff(to_date, queue[-1][date_field])
+		average_age = get_average_age(queue, to_date, date_field, qty_field, filters)
+		earliest_age = get_earliest_age(queue, date_field, filters)
+		latest_age = get_latest_age(queue, date_field, filters)
 		range_values = get_range_age(filters, queue, to_date, item_dict, date_field, qty_field)
 
 		row = [details.name, details.item_name, details.description, details.item_group, details.brand]
@@ -91,10 +93,13 @@ def format_report_data(filters: Filters, item_details: dict, to_date: str) -> li
 	return data
 
 
-def get_average_age(queue: list, to_date: str, date_field: str | int, qty_field: str | int) -> float:
-	batch_age = age_qty = total_qty = 0.0
+def get_average_age(queue: list, to_date: str, date_field: str | int, qty_field: str | int, filters: Filters) -> float:
+	age_qty = total_qty = 0.0
 	for batch in queue:
-		batch_age = date_diff(to_date, batch[date_field])
+		if filters.get("period_for_qty_sold"):
+			batch_age = date_diff(batch["outgoing_date"], batch["incoming_date"])  # Consumption period
+		else:
+			batch_age = date_diff(to_date, batch[date_field]) # Age of remaining stock
 
 		qty = batch[qty_field]
 		if isinstance(qty, (int, float)):
@@ -112,7 +117,11 @@ def get_range_age(filters: Filters, queue: list, to_date: str, item_dict: dict, 
 	range_values = [0.0] * (len(filters.ranges) + 1)
 
 	for item in queue:
-		age = flt(date_diff(to_date, item[date_field]))
+		if filters.get("period_for_qty_sold"):
+			age = flt(date_diff(item["outgoing_date"], item["incoming_date"]))  # Consumption period
+		else:
+			age = flt(date_diff(to_date, item[date_field]))  # Age of remaining stock
+	
 		qty = flt(item[qty_field]) if not item_dict["has_serial_no"] else 1.0
 
 		for i, age_limit in enumerate(filters.ranges):
@@ -123,6 +132,20 @@ def get_range_age(filters: Filters, queue: list, to_date: str, item_dict: dict, 
 			range_values[-1] = flt(range_values[-1] + qty, precision)
 
 	return range_values
+
+
+def get_earliest_age(queue: list, date_field: str | int, filters: Filters) -> int:
+	"Calculate earliest age."
+	if filters.get("period_for_qty_sold"):
+		return min(date_diff(entry["outgoing_date"], entry["incoming_date"]) for entry in queue)
+	return date_diff(filters["to_date"], queue[0][date_field])
+
+
+def get_latest_age(queue: list, date_field: str | int, filters: Filters) -> int:
+	"Calculate latest age."
+	if filters.get("period_for_qty_sold"):
+		return max(date_diff(entry["outgoing_date"], entry["incoming_date"]) for entry in queue)
+	return date_diff(filters["to_date"], queue[-1][date_field])
 
 
 def get_columns(filters: Filters) -> list[dict]:
