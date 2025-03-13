@@ -590,14 +590,15 @@ def convert_alternative_uom(data, filters):
 	alternative_uom = filters.get('alternative_uom')
 	
 	if alternative_uom:
+		columns_to_convert = [5, 7, 8, 9, 10]
 		for row in data:
 			converstion_factor = get_conversion_factor(row[0], alternative_uom)
-			available_qty_index = 5
 
-			if available_qty_index < len(row):
-				value = row[available_qty_index]
-				if isinstance(value, (int, float)):
-					row[available_qty_index] = value / converstion_factor
+			for col_index in columns_to_convert:
+				if col_index  < len(row):
+					value = row[col_index]
+					if isinstance(value, (int, float)):
+						row[col_index] = value / converstion_factor
 
 	return data
 
