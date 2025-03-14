@@ -30,6 +30,7 @@ frappe.query_reports["Custom Profit and Loss Statement"]["filters"].push({
 // 	fieldtype: "Date",
 
 // });
+
 frappe.query_reports["Custom Profit and Loss Statement"]["filters"].push({
 	fieldname: "finance_year",
 	label: __("Finance Year"),
