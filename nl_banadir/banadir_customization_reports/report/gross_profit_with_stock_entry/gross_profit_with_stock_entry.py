@@ -32,6 +32,7 @@ def execute(filters=None):
 			"invoice": [
 				"invoice_or_item",
 				"stock_entry",
+				"stock_entry_item_code",
 				"customer",
 				"customer_group",
 				"posting_date",
@@ -212,7 +213,26 @@ def get_data_when_grouped_by_invoice(
 
 		for col in group_wise_columns.get(scrub(filters.group_by)):
 			row[column_names[col]] = src.get(col)
+		data.append(row)
+  
+def get_data_when_grouped_by_stock_entry(
+	columns, gross_profit_data, filters, group_wise_columns, data
+):
+	column_names = get_column_names()
 
+	# to display item as Item Code: Item Name
+	columns[0] = "Stock :Link/Item:300"
+	# removing Item Code and Item Name columns
+	del columns[4:6]
+
+	for src in gross_profit_data.si_list:
+		row = frappe._dict()
+		row.indent = src.indent
+		row.parent_invoice = src.parent_invoice
+		row.currency = filters.currency
+
+		for col in group_wise_columns.get(scrub(filters.group_by)):
+			row[column_names[col]] = src.get(col)
 		data.append(row)
 
 
@@ -267,6 +287,12 @@ def get_columns(group_wise_columns, filters):
 				"fieldname": "stock_entry",
 				"fieldtype": "Link",
 				"options": "Stock Entry",
+				"width": 100,
+			},
+			"stock_entry_item_code": {
+				"label": _("Stock Entry Item Code"),
+				"fieldname": "stock_entry_item_code",
+				"fieldtype": "Data",
 				"width": 100,
 			},
    
@@ -475,6 +501,7 @@ def get_column_names():
 		{
 			"invoice_or_item": "sales_invoice",
 			"stock_entry": "stock_entry",
+			"stock_entry_item_code": "stock_entry_item_code",
 			"customer": "customer",
 			"customer_group": "customer_group",
 			"posting_date": "posting_date",
@@ -1469,25 +1496,38 @@ def update_quantity_with_uom_conversion(data, filters):
 
 
 def get_stock_entry(data):
-    for row in data:
-        invoice_or_item = row.get("sales_invoice")
+	for row in data:
+		invoice_or_item = row.get("sales_invoice")
 
+		if not frappe.db.exists("Sales Invoice", invoice_or_item):
+			continue
 
-        # Check if it's a valid Sales Invoice
-        if not frappe.db.exists("Sales Invoice", invoice_or_item):
-            continue
+		try:
+			invoice_doc = frappe.get_doc("Sales Invoice", invoice_or_item)
 
-        try:
-            invoice_doc = frappe.get_doc("Sales Invoice", invoice_or_item)
+			if hasattr(invoice_doc, "custom_stock_entry") and invoice_doc.custom_stock_entry:
+				stock_entries = [entry.stock_entry for entry in invoice_doc.custom_stock_entry]
 
-            if hasattr(invoice_doc, "custom_stock_entry") and invoice_doc.custom_stock_entry:
-                stock_entries = [entry.stock_entry for entry in invoice_doc.custom_stock_entry]
-                
-                row["stock_entry"] = ", ".join(stock_entries)
+				stock_entry_items = []
+				row["stock_entry"] = ", ".join(stock_entries)
+				for stock_entry_name in stock_entries:
+					stock_entry_doc = frappe.get_doc("Stock Entry", stock_entry_name)
 
-        except frappe.DoesNotExistError:
-            frappe.log_error(f"Sales Invoice {invoice_or_item} not found.", "Stock Entry Fetch Error")
-        except Exception as e:
-            frappe.log_error(f"Error processing invoice {invoice_or_item}: {str(e)}", "Stock Entry Fetch Error")
+					for item in stock_entry_doc.items:
+						if item.is_finished_item:
+							stock_entry_items.append({
+								"item_code": item.item_code,
+								"qty": item.qty,
+								"uom": item.uom,
+								"stock_entry_item_code": item.name  
+							})
 
-    return data
+				
+						row["stock_entry_item_code"] = item.item_code
+
+		except frappe.DoesNotExistError:
+			frappe.log_error(f"Sales Invoice {invoice_or_item} not found.", "Stock Entry Fetch Error")
+		except Exception as e:
+			frappe.log_error(f"Error processing invoice {invoice_or_item}: {str(e)}", "Stock Entry Fetch Error")
+
+	return data
