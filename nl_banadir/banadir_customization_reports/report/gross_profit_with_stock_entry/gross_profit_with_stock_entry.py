@@ -204,7 +204,6 @@ def get_data_when_grouped_by_invoice(
 	columns[0] = "Sales Invoice:Link/Item:300"
 	# removing Item Code and Item Name columns
 	del columns[4:6]
-
 	for src in gross_profit_data.si_list:
 		row = frappe._dict()
 		row.indent = src.indent
@@ -221,7 +220,7 @@ def get_data_when_grouped_by_stock_entry(
 	column_names = get_column_names()
 
 	# to display item as Item Code: Item Name
-	columns[0] = "Stock :Link/Item:300"
+	columns[0] = "Stock Entry :Link/Item:300"
 	# removing Item Code and Item Name columns
 	del columns[4:6]
 
@@ -772,7 +771,6 @@ class GrossProfitGenerator:
 		""",
 			as_dict=1,
 		)
-
 		self.returned_invoices = frappe._dict()
 		for inv in returned_invoices:
 			self.returned_invoices.setdefault(
@@ -867,7 +865,7 @@ class GrossProfitGenerator:
 
 	def get_buying_amount_from_so_dn(self, sales_order, so_detail, item_code):
 		from frappe.query_builder.functions import Avg
-
+			
 		delivery_note_item = frappe.qb.DocType("Delivery Note Item")
 
 		query = (
@@ -1493,7 +1491,6 @@ def update_quantity_with_uom_conversion(data, filters):
 				row[-2] = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
 
 	return data
-
 
 def get_stock_entry(data):
 	for row in data:
