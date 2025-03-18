@@ -18,4 +18,13 @@ frappe.query_reports["Average Exchange Rate"] = {
       reqd: 1,
     },
   ],
+
+  formatter: function (value, row, column, data, default_formatter) {
+    value = default_formatter(value, row, column, data);
+
+    if (data && data.is_total) {
+      value = `<b>${value}</b>`;
+    }
+    return value;
+  },
 };

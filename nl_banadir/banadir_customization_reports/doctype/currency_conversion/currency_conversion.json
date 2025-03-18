@@ -10,7 +10,9 @@
  "field_order": [
   "date",
   "from_currency",
+  "from_amount",
   "to_currency",
+  "to_amount",
   "exchange_rate",
   "column_break_5",
   "for_buying",
@@ -70,11 +72,23 @@
    "fieldname": "for_selling",
    "fieldtype": "Check",
    "label": "For Selling"
+  },
+  {
+   "fieldname": "from_amount",
+   "fieldtype": "Currency",
+   "label": "From Amount",
+   "options": "from_currency"
+  },
+  {
+   "fieldname": "to_amount",
+   "fieldtype": "Currency",
+   "label": "To Amount",
+   "options": "to_currency"
   }
  ],
  "icon": "fa fa-exchange",
  "links": [],
- "modified": "2025-03-10 13:07:05.415262",
+ "modified": "2025-03-18 13:12:51.086910",
  "modified_by": "Administrator",
  "module": "Banadir Customization-Reports",
  "name": "Currency Conversion",
