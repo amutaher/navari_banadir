@@ -21,8 +21,8 @@ def execute(filters: dict | None = None):
     if data:
         totals = calculate_average_exchange_rate(data)
 
-    data[-1] = totals
-    print("DATA", data)
+    if totals:
+        data[-1] = totals
 
     return columns, data
 
