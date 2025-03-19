@@ -143,6 +143,11 @@ frappe.query_reports["Gross Profit with Stock Entry"] = {
 		var $value = $(value).css("font-weight", "bold");
 		value = $value.wrap("<p></p>").parent().html();
 	  }
+	  if(data && data.bolden ==1){
+		value = $(`<span>${value}</span>`);
+		var $value = $(value).css("font-weight", "bold");
+		value = $value.wrap("<p></p>").parent().html();
+	  }
   
 	  return value;
 	},
