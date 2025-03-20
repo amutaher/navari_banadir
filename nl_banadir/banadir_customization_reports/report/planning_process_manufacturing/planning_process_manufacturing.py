@@ -145,7 +145,6 @@ def add_insole_stock_data(record):
     :return: Updated record with insole stock data.
     """
     finished_goods_work_order_no = record.get("finished_goods_work_order_no")
-    
     if not finished_goods_work_order_no:
         return record
 
@@ -175,7 +174,6 @@ WHERE
             {"purchase_order": insole_data["purchase_order"]},
             "name",
         )
-        
         receipt = frappe.db.sql(
             f"""
             SELECT
@@ -190,11 +188,11 @@ WHERE
             """,
             as_dict=True,
         )
-
+        # frappe.throw(str(insole_data["issued_qty"]))
         received_qty = receipt[0].received_quantity if receipt else 0
         balance_quantity = insole_data["issued_qty"] - received_qty
-
-        upper_stock = received_qty - record.get("qty_issued_machine")
+        # frappe.throw(str(record.get("qty_issued_machine")))
+        upper_stock = received_qty - record.get("qty_issued_machine") if record.get("qty_issued_machine") else 0
         record.update(
             {
                 "quantity_issued": insole_data["issued_qty"],
