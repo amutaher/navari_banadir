@@ -59,6 +59,8 @@ def get_columns():
 
 def get_data(filters):
     conditions = []
+    if filters.get("company"):
+        conditions.append(f"pp.company = '{filters['company']}'")
     if filters.get("production_plan"):
         conditions.append(f"pp.name = '{filters['production_plan']}'")
     if filters.get("sales_order"):
