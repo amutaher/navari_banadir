@@ -4,6 +4,15 @@
 frappe.query_reports["Planning Process Manufacturing"] = {
     "filters": [
         {
+            label: __("Company"),
+            fieldname: "company",
+            fieldtype: "Link",
+            options: "Company",
+            default: frappe.defaults.get_user_default("Company"),
+            reqd:1,
+        },
+
+        {
             label: __("Production Plan"),
             fieldname: "production_plan",
             fieldtype: "Link",

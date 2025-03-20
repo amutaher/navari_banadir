@@ -32,26 +32,26 @@ def execute(filters=None):
 			"invoice": [
 				"invoice_or_item",
 				"stock_entry",
-				"stock_entry_item_code",
+				# "stock_entry_item_code",
 				"customer",
-				"customer_group",
+				# "customer_group",
 				"posting_date",
-				"item_code",
+				# "item_code",
 				"item_name",
 				"item_group",
-				"brand",
-				"description",
+				# "brand",
+				# "description",
 				"warehouse",
 				"qty",
 				"cost",
 				"cost_amount",
 				"base_rate",
-				"buying_rate",
-				"base_amount",
-				"buying_amount",
-				"gross_profit",
-				"gross_profit_percent",
-				"project",
+				# "buying_rate",
+				# "base_amount",
+				# "buying_amount",
+				# "gross_profit",
+				# "gross_profit_percent",
+				# "project",
 				"branch",
 				"cost_center",
 			],
@@ -282,12 +282,14 @@ def get_columns(group_wise_columns, filters):
 				"fieldname": "cost",
 				"fieldtype": "Currency",
 				"options": "currency",
+				"width": 100,
 			},
 			"cost_amount":{
 				"label": _("Cost Amount"),
 				"fieldname": "cost_amount",
 				"fieldtype": "Currency",	
 				"options": "currency",
+				"width": 100,
 			},
 			
 			"posting_time": {
@@ -517,7 +519,7 @@ def get_column_names():
 			"stock_entry": "stock_entry",
    "cost":"cost",
    "cost_amount":"cost_amount",
-			"stock_entry_item_code": "stock_entry_item_code",
+			# "stock_entry_item_code": "stock_entry_item_code",
 			"customer": "customer",
 			"customer_group": "customer_group",
 			"posting_date": "posting_date",
@@ -1510,18 +1512,18 @@ def update_quantity_with_uom_conversion(data, filters):
 	return data
 
 
-
 def get_stock_entry(data):
     updated_data = []
 
     for row in data:
         updated_data.append(row)
 
-        if row.get("indent") == 0:  
+        if row.get("indent") == 0:
             invoice_or_item = row.get("sales_invoice")
 
             if not frappe.db.exists("Sales Invoice", invoice_or_item):
-                continue  
+                continue
+
             try:
                 invoice_doc = frappe.get_doc("Sales Invoice", invoice_or_item)
 
@@ -1529,31 +1531,7 @@ def get_stock_entry(data):
                     stock_entries = [entry.stock_entry for entry in invoice_doc.custom_stock_entry]
 
                     for stock_entry_name in stock_entries:
-                        updated_data.append({
-                            "sales_invoice": stock_entry_name,
-                            "indent": 1,  
-                            "is_group": 1,  
-                            "parent": invoice_or_item,
-                            "cost_amount":frappe.get_value("Stock Entry", stock_entry_name, "total_outgoing_value"),
-                            "qty":frappe.get_value("Stock Entry", stock_entry_name, "custom_total_quantity"),
-                            "bolden":1
-                        })
-
-                        # Fetch and add stock entry items with indent 2 (child of the stock entry)
-                        stock_entry_doc = frappe.get_doc("Stock Entry", stock_entry_name)
-                        for item in stock_entry_doc.items:
-                            if item.is_finished_item:
-                                updated_data.append({
-                                    "sales_invoice": item.item_code,
-                                    "stock_entry_item_code": item.item_code,
-                                    "qty": item.qty,
-                                    "valuation_rate": item.valuation_rate,
-                                    "cost":item.basic_rate,
-                                    "cost_amount":item.amount,
-                                    "indent": 2, 
-                                    "parent": stock_entry_name,
-                                    "is_group": 0 
-                                })
+                        append_stock_entry_details(updated_data, stock_entry_name, invoice_or_item)
 
             except frappe.DoesNotExistError:
                 frappe.log_error(f"Sales Invoice {invoice_or_item} not found.", "Stock Entry Fetch Error")
@@ -1562,3 +1540,33 @@ def get_stock_entry(data):
 
     return updated_data
 
+
+def append_stock_entry_details(updated_data, stock_entry_name, parent_invoice):
+    updated_data.append({
+        "sales_invoice": stock_entry_name,
+        "stock_entry": stock_entry_name,
+        "posting_date": frappe.get_value("Stock Entry", stock_entry_name, "posting_date"),
+        "indent": 1,
+        "is_group": 1,
+        "parent": parent_invoice,
+        "cost_amount": frappe.get_value("Stock Entry", stock_entry_name, "total_outgoing_value"),
+        "qty": frappe.get_value("Stock Entry", stock_entry_name, "custom_total_quantity"),
+        "bolden": 1,
+    })
+
+    stock_entry_doc = frappe.get_doc("Stock Entry", stock_entry_name)
+    for item in stock_entry_doc.items:
+        updated_data.append({
+            "sales_invoice": item.item_code,
+            "qty": item.transfer_qty,
+            "valuation_rate": item.valuation_rate,
+            "cost": item.basic_rate,
+            "cost_amount": item.amount,
+            "indent": 2,
+            "parent": stock_entry_name,
+            "is_group": 0,
+            "item_code": item.item_code,
+            "item_name": item.item_name,
+            "item_group": item.item_group,
+            "warehouse": item.s_warehouse,
+        })

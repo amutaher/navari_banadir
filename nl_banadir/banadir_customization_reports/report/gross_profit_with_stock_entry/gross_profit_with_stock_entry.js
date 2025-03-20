@@ -42,7 +42,7 @@ frappe.query_reports["Gross Profit with Stock Entry"] = {
 		label: __("Group By"),
 		fieldtype: "Select",
 		options:
-		  "Invoice\nItem Code\nItem Group\nBrand\nWarehouse\nCustomer\nCustomer Group\nTerritory\nSales Person\nProject\nMonthly\nPayment Term\nBranch",
+		  "Invoice",
 		default: "Invoice",
 	  },
 	  {
@@ -81,18 +81,7 @@ frappe.query_reports["Gross Profit with Stock Entry"] = {
 		  };
 		},
 	  },
-	  {
-		fieldname: "project",
-		label: __("Project"),
-		fieldtype: "Link",
-		options: "Project",
-		get_query: function () {
-		  var company = frappe.query_report.get_filter_value("company");
-		  return {
-			filters: [["Project", "company", "=", company]],
-		  };
-		},
-	  },
+
 	  {
 		fieldname: "branch",
 		label: __("Branch"),
