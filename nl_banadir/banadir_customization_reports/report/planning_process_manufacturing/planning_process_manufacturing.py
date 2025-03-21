@@ -61,7 +61,8 @@ def int_or_float(filters):
     return "Int" if filters.remove_precision else "Float"
 
 def get_data(filters):
-    conditions = []
+    conditions = ["fg_work_order.status != 'Cancelled'", "insole_work_order.status != 'Cancelled'"]
+
     if filters.get("company"):
         conditions.append(f"pp.company = '{filters['company']}'")
     if filters.get("production_plan"):
