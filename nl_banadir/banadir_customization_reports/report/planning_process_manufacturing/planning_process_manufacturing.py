@@ -28,7 +28,7 @@ def get_columns(filters):
         {"label": "Item Name (Finished Goods)", "fieldname": "finished_goods_item", "fieldtype": "Link","options":"Item", "width": 200},
         {"label": "Item Name (Insole)", "fieldname": "insole_item","fieldtype": "Link","options":"Item", "width": 200},
         {"label": "Item Name (Upper)", "fieldname": "upper_item", "fieldtype": "Link","options":"Item", "width": 200},
-        {"label": "Order/Pairs", "fieldname": "order_pairs", "fieldtype": int_or_float(filters), "width": 100},
+        {"label": "Order/Pairs", "fieldname": "order_pairs", "fieldtype": int_or_float(filters),"precision":1, "width": 100},
         {"label": "Date of Issue(In Progress)", "fieldname": "in_progress_date", "fieldtype": "Date", "width": 120},
         {"label": "Qty Issued", "fieldname": "qty_issued", "fieldtype": "float", "width": 120},
 
@@ -59,6 +59,7 @@ def get_columns(filters):
 
 def int_or_float(filters):
     return "Int" if filters.remove_precision else "Float"
+
 def get_data(filters):
     conditions = []
     if filters.get("company"):
@@ -139,6 +140,13 @@ def get_data(filters):
     main_data = [add_insole_stock_data(record) for record in result]
     [update_insole_stock_qty(record) for record in main_data]
     [update_stock_details(record) for record in main_data]
+    
+    # for record in main_data:
+        
+    #     for key, value in record.items():
+           
+    #         record[key] = format_with_thousand_separator(value)
+            
     return main_data
 
 def add_insole_stock_data(record):
@@ -276,3 +284,21 @@ def update_stock_details(record):
         "balance_to_issue": qty_issued_machine - (is_finished_item_qty + rejected_qty_issued),
     })
     return record
+
+def format_with_thousand_separator(value):
+    if isinstance(value, (int, float)):
+        if value == int(value):
+            return "{:,.0f}".format(value)  
+        else:
+            return "{:,.2f}".format(value)
+    return value
+
+def convert_to_int(value, filters):
+    if filters.get('remove_precision'):
+        try:
+            return int(float(value))  
+        except (ValueError, TypeError):
+            return value 
+    return value
+
+    
