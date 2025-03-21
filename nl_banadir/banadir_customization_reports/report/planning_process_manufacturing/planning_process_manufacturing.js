@@ -52,6 +52,12 @@ frappe.query_reports["Planning Process Manufacturing"] = {
             label: __("To Date"),
             fieldname: "to_date",
             fieldtype: "Date",
+        },
+        {
+            label: __("Remove Precision"),
+            fieldname: "remove_precision",
+            fieldtype: "Check",
+            default: 1,
         }
     ]
 };
