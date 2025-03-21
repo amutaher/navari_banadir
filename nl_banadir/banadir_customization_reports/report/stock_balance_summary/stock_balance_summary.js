@@ -151,6 +151,12 @@ frappe.query_reports["Stock Balance Summary"] = {
       }
     }
 
+    // Format total row with thousand separators and bold
+    if (!row) {
+      value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      value = `<b>${value}</b>`;
+    }
+
     if (data && data.is_total) {
       value = `<b>${value}</b>`;
     }
