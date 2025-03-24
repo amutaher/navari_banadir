@@ -34,6 +34,7 @@ class SuppliersProcessStatementOfAccounts(Document):
         if not self.subject:
             self.subject = "Statement of Accounts for {{ supplier.supplier_name }}"
         if not self.body:
+            body_str = ""
             if self.report == "General Ledger":
                 body_str = " from {{ doc.from_date }} to {{ doc.to_date }}."
             else:
@@ -186,11 +187,8 @@ def get_ar_filters(doc, entry):
         "payment_terms_template": (
             doc.payment_terms_template if doc.payment_terms_template else None
         ),
-        "sales_partner": doc.sales_partner if doc.sales_partner else None,
-        "sales_person": doc.sales_person if doc.sales_person else None,
-        "territory": doc.territory if doc.territory else None,
         "based_on_payment_terms": doc.based_on_payment_terms,
-        "report_name": "Accounts Receivable",
+        "report_name": "Accounts Payable",
         "ageing_based_on": doc.ageing_based_on,
         "range1": 30,
         "range2": 60,
@@ -202,9 +200,9 @@ def get_ar_filters(doc, entry):
 def get_html(doc, filters, entry, col, res, ageing):
     base_template_path = "frappe/www/printview.html"
     template_path = (
-        "nl_banadir/templates/process_statement_of_accounts_accounts_payable.html"
+        "nl_banadir/templates/process_statement_of_accounts_suppliers.html"
         if doc.report == "General Ledger"
-        else "nl_banadir/templates/process_statement_of_accounts_accounts_receivable.html"
+        else "nl_banadir/templates/process_statement_of_accounts_accounts_payable.html"
     )
 
     if doc.letter_head:
