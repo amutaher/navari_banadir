@@ -142,11 +142,6 @@ def get_data(filters):
     [update_insole_stock_qty(record) for record in main_data]
     [update_stock_details(record) for record in main_data]
     
-    # for record in main_data:
-        
-    #     for key, value in record.items():
-           
-    #         record[key] = if_numerical(value)
             
     return main_data
 
@@ -293,23 +288,3 @@ def format_with_thousand_separator(value):
         else:
             return "{:,.2f}".format(value)
     return value
-
-# def convert_to_int(value, filters):
-#     if filters.get('remove_precision'):
-#         try:
-#             return int(float(value))  
-#         except (ValueError, TypeError):
-#             return value 
-#     return value
-
-    
-# def if_numerical(value):
-#     value = str(value)
-#     try:
-#         if value.isdigit():
-           
-#             value= format_with_thousand_separator(value)
-#         else:
-#             return value
-#     except ValueError:
-#         return value
