@@ -58,7 +58,7 @@ def get_columns(filters):
     ]
 
 def int_or_float(filters):
-    return "Int" if filters.remove_precision else "Float"
+    return "Int" if filters.remove_precision==1 else "Float"
 
 def get_data(filters):
     conditions = ["fg_work_order.status != 'Cancelled'", "insole_work_order.status != 'Cancelled'"]
@@ -146,7 +146,7 @@ def get_data(filters):
         
     #     for key, value in record.items():
            
-    #         record[key] = format_with_thousand_separator(value)
+    #         record[key] = if_numerical(value)
             
     return main_data
 
@@ -294,12 +294,22 @@ def format_with_thousand_separator(value):
             return "{:,.2f}".format(value)
     return value
 
-def convert_to_int(value, filters):
-    if filters.get('remove_precision'):
-        try:
-            return int(float(value))  
-        except (ValueError, TypeError):
-            return value 
-    return value
+# def convert_to_int(value, filters):
+#     if filters.get('remove_precision'):
+#         try:
+#             return int(float(value))  
+#         except (ValueError, TypeError):
+#             return value 
+#     return value
 
     
+# def if_numerical(value):
+#     value = str(value)
+#     try:
+#         if value.isdigit():
+           
+#             value= format_with_thousand_separator(value)
+#         else:
+#             return value
+#     except ValueError:
+#         return value
