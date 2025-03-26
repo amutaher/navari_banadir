@@ -20,7 +20,6 @@ frappe.ui.form.on("Purchase Order Item",{
       }
     },
     custom_work_order: function(frm, cdt, cdn){
-      
         var child = locals[cdt][cdn];
         frappe.call({
             method: "nl_banadir.banadir_customization_reports.controllers.purchase_order.get_qty_from_first_work_order",
@@ -29,9 +28,11 @@ frappe.ui.form.on("Purchase Order Item",{
             },
             callback: function(response){
                 if(response.message){
+                  console.log(response.message.rate);
                     frappe.model.set_value(cdt, cdn, "fg_item_qty", response.message.work_order_qty);
                     frappe.model.set_value(cdt, cdn, "fg_item", response.message.upper_stock_items);
-
+                    frappe.model.set_value(cdt, cdn, "qty", response.message.work_order_qty);
+                    frappe.model.set_value(cdt, cdn, "rate", response.message.rate);
 
                 }
             }
