@@ -22,6 +22,8 @@ fixtures = [
                     "Employee-nssf_no",
                     "Employee-tax_id",
                     "Salary Component-p9a_tax_deduction_card_type",
+                    "BOM-custom_purchase_order",
+                    "BOM-custom_job_charges_rate",
                 ),
             ]
         ],

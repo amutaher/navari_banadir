@@ -142,12 +142,6 @@ def get_data(filters):
     [update_insole_stock_qty(record) for record in main_data]
     [update_stock_details(record) for record in main_data]
     
-    # for record in main_data:
-        
-    #     for key, value in record.items():
-           
-    #         record[key] = if_numerical(value)
-            
     return main_data
 
 def add_insole_stock_data(record):
@@ -282,7 +276,7 @@ def update_stock_details(record):
         "rejected_qty_issued": rejected_qty_issued,
         "fresh_qty_issued":is_finished_item_qty,
         "b_qty_issued": b_qty_issued,
-        "balance_to_issue": qty_issued_machine - (is_finished_item_qty + rejected_qty_issued),
+        "balance_to_issue": qty_issued_machine - (is_finished_item_qty + rejected_qty_issued+b_qty_issued),
     })
     return record
 
@@ -293,23 +287,3 @@ def format_with_thousand_separator(value):
         else:
             return "{:,.2f}".format(value)
     return value
-
-# def convert_to_int(value, filters):
-#     if filters.get('remove_precision'):
-#         try:
-#             return int(float(value))  
-#         except (ValueError, TypeError):
-#             return value 
-#     return value
-
-    
-# def if_numerical(value):
-#     value = str(value)
-#     try:
-#         if value.isdigit():
-           
-#             value= format_with_thousand_separator(value)
-#         else:
-#             return value
-#     except ValueError:
-#         return value
