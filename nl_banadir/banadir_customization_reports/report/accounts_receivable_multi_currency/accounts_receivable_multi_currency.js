@@ -129,6 +129,11 @@ frappe.query_reports["Accounts Receivable Multi Currency"] = {
           options: "Sales Person",
         },
         {
+          fieldname: "group_by_party",
+          label: __("Group By Customer"),
+          fieldtype: "Check",
+        },
+        {
           fieldname: "based_on_payment_terms",
           label: __("Based On Payment Terms"),
           fieldtype: "Check",
@@ -155,6 +160,14 @@ frappe.query_reports["Accounts Receivable Multi Currency"] = {
           options: erpnext.get_presentation_currency_list(),
         },
       ],
+
+      formatter: function (value, row, column, data, default_formatter) {
+        value = default_formatter(value, row, column, data);
+        if (data && data.bold) {
+          value = value.bold();
+        }
+        return value;
+      },    
     
       onload: function (report) {
         report.page.add_inner_button(
