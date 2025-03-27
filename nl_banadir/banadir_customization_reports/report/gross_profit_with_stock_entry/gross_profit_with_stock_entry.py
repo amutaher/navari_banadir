@@ -1,4 +1,4 @@
-# Copyright (c) 2024, Navari Ltd and contributors
+# Copyright (c) 2025, Navari Ltd and contributors
 # For license information, please see license.txt
 
 from collections import OrderedDict
@@ -16,6 +16,7 @@ from erpnext.stock.utils import get_incoming_rate
 
 
 def execute(filters=None):
+	
 	if not filters:
 		filters = frappe._dict()
 	filters.currency = frappe.get_cached_value(
@@ -25,28 +26,32 @@ def execute(filters=None):
 	gross_profit_data = GrossProfitGenerator(filters)
 
 	data = []
-
+	# frappe.throw(str(get_stock_entry("CW/EX-084/24-25.,")))
 	group_wise_columns = frappe._dict(
 		{
 			"invoice": [
 				"invoice_or_item",
+				"stock_entry",
+				# "stock_entry_item_code",
 				"customer",
-				"customer_group",
+				# "customer_group",
 				"posting_date",
-				"item_code",
+				# "item_code",
 				"item_name",
 				"item_group",
-				"brand",
-				"description",
+				# "brand",
+				# "description",
 				"warehouse",
 				"qty",
+				"cost",
+				"cost_amount",
 				"base_rate",
-				"buying_rate",
-				"base_amount",
-				"buying_amount",
-				"gross_profit",
-				"gross_profit_percent",
-				"project",
+				# "buying_rate",
+				# "base_amount",
+				# "buying_amount",
+				# "gross_profit",
+				# "gross_profit_percent",
+				# "project",
 				"branch",
 				"cost_center",
 			],
@@ -184,11 +189,11 @@ def execute(filters=None):
 
 	data = convert_currency_columns(data, filters)
 	# frappe.throw(str(data))
+	data = get_stock_entry(data)
 	if filters.group_by=="Customer":
 		data = update_quantity_with_uom_conversion(data, filters)
 	if filters.get("alternative_uom") and filters.group_by !="Customer":
 		data = convert_alternative_uom(data, filters)
-		print(str(data))
 	return columns, data
 
 
@@ -201,6 +206,25 @@ def get_data_when_grouped_by_invoice(
 	columns[0] = "Sales Invoice:Link/Item:300"
 	# removing Item Code and Item Name columns
 	del columns[4:6]
+	for src in gross_profit_data.si_list:
+		row = frappe._dict()
+		row.indent = src.indent
+		row.parent_invoice = src.parent_invoice
+		row.currency = filters.currency
+
+		for col in group_wise_columns.get(scrub(filters.group_by)):
+			row[column_names[col]] = src.get(col)
+		data.append(row)
+  
+def get_data_when_grouped_by_stock_entry(
+	columns, gross_profit_data, filters, group_wise_columns, data
+):
+	column_names = get_column_names()
+
+	# to display item as Item Code: Item Name
+	columns[0] = "Stock Entry :Link/Item:300"
+	# removing Item Code and Item Name columns
+	del columns[4:6]
 
 	for src in gross_profit_data.si_list:
 		row = frappe._dict()
@@ -210,7 +234,6 @@ def get_data_when_grouped_by_invoice(
 
 		for col in group_wise_columns.get(scrub(filters.group_by)):
 			row[column_names[col]] = src.get(col)
-
 		data.append(row)
 
 
@@ -246,11 +269,26 @@ def get_columns(group_wise_columns, filters):
 				"fieldtype": "Link",
 				"options": "Sales Invoice",
 				"width": 120,
+				"bolden": 0,
 			},
 			"posting_date": {
 				"label": _("Posting Date"),
 				"fieldname": "posting_date",
 				"fieldtype": "Date",
+				"width": 100,
+			},
+			"cost":{
+				"label": _("Cost"),
+				"fieldname": "cost",
+				"fieldtype": "Currency",
+				"options": "currency",
+				"width": 100,
+			},
+			"cost_amount":{
+				"label": _("Cost Amount"),
+				"fieldname": "cost_amount",
+				"fieldtype": "Currency",	
+				"options": "currency",
 				"width": 100,
 			},
 			
@@ -260,6 +298,20 @@ def get_columns(group_wise_columns, filters):
 				"fieldtype": "Data",
 				"width": 100,
 			},
+   "stock_entry": {
+				"label": _("Stock Entry"),
+				"fieldname": "stock_entry",
+				"fieldtype": "Link",
+				"options": "Stock Entry",
+				"width": 100,
+			},
+			"stock_entry_item_code": {
+				"label": _("Stock Entry Item Code"),
+				"fieldname": "stock_entry_item_code",
+				"fieldtype": "Data",
+				"width": 100,
+			},
+   
 			"item_code": {
 				"label": _("Item Code"),
 				"fieldname": "item_code",
@@ -464,6 +516,10 @@ def get_column_names():
 	return frappe._dict(
 		{
 			"invoice_or_item": "sales_invoice",
+			"stock_entry": "stock_entry",
+   "cost":"cost",
+   "cost_amount":"cost_amount",
+			# "stock_entry_item_code": "stock_entry_item_code",
 			"customer": "customer",
 			"customer_group": "customer_group",
 			"posting_date": "posting_date",
@@ -734,7 +790,6 @@ class GrossProfitGenerator:
 		""",
 			as_dict=1,
 		)
-
 		self.returned_invoices = frappe._dict()
 		for inv in returned_invoices:
 			self.returned_invoices.setdefault(
@@ -829,7 +884,7 @@ class GrossProfitGenerator:
 
 	def get_buying_amount_from_so_dn(self, sales_order, so_detail, item_code):
 		from frappe.query_builder.functions import Avg
-
+			
 		delivery_note_item = frappe.qb.DocType("Delivery Note Item")
 
 		query = (
@@ -1455,3 +1510,63 @@ def update_quantity_with_uom_conversion(data, filters):
 				row[-2] = filters.get("presentation_currency") or frappe.get_cached_value("Company", filters.company, "default_currency")
 
 	return data
+
+
+def get_stock_entry(data):
+    updated_data = []
+
+    for row in data:
+        updated_data.append(row)
+
+        if row.get("indent") == 0:
+            invoice_or_item = row.get("sales_invoice")
+
+            if not frappe.db.exists("Sales Invoice", invoice_or_item):
+                continue
+
+            try:
+                invoice_doc = frappe.get_doc("Sales Invoice", invoice_or_item)
+
+                if hasattr(invoice_doc, "custom_stock_entry") and invoice_doc.custom_stock_entry:
+                    stock_entries = [entry.stock_entry for entry in invoice_doc.custom_stock_entry]
+
+                    for stock_entry_name in stock_entries:
+                        append_stock_entry_details(updated_data, stock_entry_name, invoice_or_item)
+
+            except frappe.DoesNotExistError:
+                frappe.log_error(f"Sales Invoice {invoice_or_item} not found.", "Stock Entry Fetch Error")
+            except Exception as e:
+                frappe.log_error(f"Error processing invoice {invoice_or_item}: {str(e)}", "Stock Entry Fetch Error")
+
+    return updated_data
+
+
+def append_stock_entry_details(updated_data, stock_entry_name, parent_invoice):
+    updated_data.append({
+        "sales_invoice": stock_entry_name,
+        "stock_entry": stock_entry_name,
+        "posting_date": frappe.get_value("Stock Entry", stock_entry_name, "posting_date"),
+        "indent": 1,
+        "is_group": 1,
+        "parent": parent_invoice,
+        "cost_amount": frappe.get_value("Stock Entry", stock_entry_name, "total_outgoing_value"),
+        "qty": frappe.get_value("Stock Entry", stock_entry_name, "custom_total_quantity"),
+        "bolden": 1,
+    })
+
+    stock_entry_doc = frappe.get_doc("Stock Entry", stock_entry_name)
+    for item in stock_entry_doc.items:
+        updated_data.append({
+            "sales_invoice": item.item_code,
+            "qty": item.transfer_qty,
+            "valuation_rate": item.valuation_rate,
+            "cost": item.basic_rate,
+            "cost_amount": item.amount,
+            "indent": 2,
+            "parent": stock_entry_name,
+            "is_group": 0,
+            "item_code": item.item_code,
+            "item_name": item.item_name,
+            "item_group": item.item_group,
+            "warehouse": item.s_warehouse,
+        })

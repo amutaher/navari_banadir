@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Navari Ltd and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Stock Ageing Report"] = {
+frappe.query_reports["Stock Consumption"] = {
 	filters: [
 		{
 			fieldname: "company",
@@ -47,12 +47,6 @@ frappe.query_reports["Stock Ageing Report"] = {
 			fieldtype: "Link",
 			options: "Item",
 		},
-        {
-            fieldname: "alternative_uom",
-            label: "Alternative UOM",
-            fieldtype: "Link",
-            options: "UOM"
-        },
 		{
 			fieldname: "brand",
 			label: __("Brand"),
@@ -71,28 +65,5 @@ frappe.query_reports["Stock Ageing Report"] = {
 			fieldtype: "Check",
 			default: 0,
 		},
-        {
-            fieldname: "remove_precision",
-            label: __("Remove Precision"),
-            fieldtype: "Check",
-            default: 1,
-        },
-		{
-			fieldname: "period_for_qty_sold",
-			label: __("Period For Qty Sold"),
-			fieldtype: "Check",
-			default: 0,
-		}
 	],
-
-	formatter: function (value, row, column, data, default_formatter) {
-		let remove_precision = frappe.query_report.get_filter_value("remove_precision");
-		
-		if (typeof value === "number") {
-			if (remove_precision) {
-				return Math.round(value).toLocaleString("en-US");
-			}
-		}
-		return default_formatter ? default_formatter(value, row, column, data) : value;
-	},
 };

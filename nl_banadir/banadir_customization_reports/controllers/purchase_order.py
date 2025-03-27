@@ -34,6 +34,7 @@ def get_qty_from_first_work_order(work_order):
     """
  
     work_order = frappe.get_doc("Work Order", work_order)
+    rate = get_job_charges_rate(work_order)
     required_materials = frappe.get_all(
         "Work Order Item",
         filters={
@@ -42,12 +43,19 @@ def get_qty_from_first_work_order(work_order):
         },
         fields=["item_code"]
     )
-    response = { "work_order_qty": work_order.qty, "upper_stock_items": [] }
+    response = { "work_order_qty": work_order.qty, "upper_stock_items": [], "rate": rate }
     
     if required_materials:
         response["upper_stock_items"] = required_materials[0]["item_code"]
     frappe.response["message"] = response
     
+    
+def get_job_charges_rate(work_order):
+    """
+    Fetch the job charges rate from the BOM associated with the given Work Order.
+    """
+    bom = frappe.get_doc("BOM", work_order.bom_no)
+    return bom.custom_job_charges_rate or 0.0
     
 
 

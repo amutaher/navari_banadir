@@ -22,6 +22,8 @@ fixtures = [
                     "Employee-nssf_no",
                     "Employee-tax_id",
                     "Salary Component-p9a_tax_deduction_card_type",
+                    "BOM-custom_purchase_order",
+                    "BOM-custom_job_charges_rate",
                 ),
             ]
         ],
@@ -62,6 +64,9 @@ doc_events = {
     },
     "Stock Entry": {
         "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save"
+    },
+    "Sales Shipment Cost": {
+        "before_cancel": "nl_banadir.banadir_customization_reports.controllers.sales_shipment_cost.before_cancel",
     },
 }
 

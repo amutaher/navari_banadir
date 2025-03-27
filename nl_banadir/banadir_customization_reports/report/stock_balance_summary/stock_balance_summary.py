@@ -92,27 +92,6 @@ class StockBalanceReport:
 
             self.data = updated_data
 
-        total_bal_qty, total_bal_alternative_uom_qty = self.calculate_total_bal_qty()
-        total_in_qty = sum(row.get("in_qty", 0) for row in self.data)
-        total_in_qty_alt = sum(row.get("in_qty_alt", 0) for row in self.data)
-        total_out_qty = sum(row.get("out_qty", 0) for row in self.data)
-        total_out_qty_alt = sum(row.get("out_qty_alt", 0) for row in self.data)
-
-        # if not self.filters.get("show_warehouse_totals"):
-        total_row = {
-            "item_code": _("Overall Total"),
-            "bal_qty": total_bal_qty,
-            "bal_qty_alt": total_bal_alternative_uom_qty,
-            "in_qty": total_in_qty,
-            "in_qty_alt": total_in_qty_alt,
-            "out_qty": total_out_qty,
-            "out_qty_alt": total_out_qty_alt,
-            "bal_val": 0.0,
-            "is_total": True,
-        }
-
-        self.data.append(total_row)
-
         return self.columns, self.data
 
     def calculate_total_bal_qty(self):

@@ -184,6 +184,9 @@ class AccountsReceivableSummary(ReceivablePayableReport):
                     row.paid = convert(
                         row.paid, to_currency, from_currency, conversion_data[1]
                     )
+                    row.credit_note = convert(
+                        row.credit_note, to_currency, from_currency, conversion_data[1]
+                    )
                     row.outstanding = convert(
                         row.outstanding, to_currency, from_currency, conversion_data[1]
                     )
