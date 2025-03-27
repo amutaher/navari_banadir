@@ -184,7 +184,8 @@ WHERE
         receipt = frappe.db.sql(
             f"""
             SELECT
-                SUM(sci.qty) AS received_quantity,
+                # SUM(sci.qty) AS received_quantity,
+                sci.qty AS received_quantity,
                 sci.item_code AS upper_stock
             FROM
                 `tabSubcontracting Receipt Item` sci
@@ -195,6 +196,7 @@ WHERE
             """,
             as_dict=True,
         )
+        # frappe.throw(str(receipt))
         received_qty = receipt[0].received_quantity if receipt else 0
         balance_quantity = insole_data["issued_qty"] - received_qty
         qty_issued_machine = record.get("qty_issued_machine") or 0
