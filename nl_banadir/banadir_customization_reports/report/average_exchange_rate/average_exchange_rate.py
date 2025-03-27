@@ -17,12 +17,11 @@ def execute(filters: dict | None = None):
     columns = get_columns()
     data = get_data(filters)
 
-    totals = {}
     if data:
-        totals = calculate_average_exchange_rate(data)
+        average_exchange_rate = calculate_average_exchange_rate(data)
 
-    if totals:
-        data[-1] = totals
+    if average_exchange_rate:
+        data[-1]["average_exchange_rate"] = average_exchange_rate
 
     return columns, data
 
@@ -38,26 +37,39 @@ def get_columns() -> list[dict]:
             "fieldname": "name",
             "fieldtype": "Link",
             "options": "Currency Conversion",
+            "width": 300,
         },
         {
             "label": _("Date"),
             "fieldname": "date",
             "fieldtype": "Date",
+            "width": 300,
         },
         {
             "label": _("Amount(USD)"),
             "fieldname": "amount_usd",
-            "fieldtype": "Float",
+            "fieldtype": "Currency",
+            "options": "from_currency",
+            "width": 300,
         },
         {
             "label": _("Amount(INR)"),
             "fieldname": "amount_inr",
-            "fieldtype": "Float",
+            "fieldtype": "Currency",
+            "options": "to_currency",
+            "width": 300,
         },
         {
             "label": _("Exchange Rate"),
             "fieldname": "exchange_rate",
-            "fieldtype": "Data",
+            "fieldtype": "Float",
+            "width": 300,
+        },
+        {
+            "label": _("Average Exchange Rate"),
+            "fieldname": "average_exchange_rate",
+            "fieldtype": "Float",
+            "width": 300,
         },
     ]
 
@@ -75,6 +87,8 @@ def get_data(filters) -> list[list]:
             currency_conversion_doc.from_amount.as_("amount_usd"),
             currency_conversion_doc.to_amount.as_("amount_inr"),
             currency_conversion_doc.date,
+            currency_conversion_doc.from_currency,
+            currency_conversion_doc.to_currency,
             currency_conversion_doc.exchange_rate,
         )
         .where(
@@ -85,13 +99,22 @@ def get_data(filters) -> list[list]:
     )
     data = query.run(as_dict=True)
 
+    data = format_data(data)
+
+    return data
+
+
+def format_data(data):
+    for d in data:
+        d["average_exchange_rate"] = None
+
     return data
 
 
 def calculate_average_exchange_rate(data):
     totals_dict = {
         "is_total": 1,
-        "name": "Total",
+        "name": "Total -> Average",
         "amount_usd": 0,
         "amount_inr": 0,
     }
@@ -106,4 +129,4 @@ def calculate_average_exchange_rate(data):
 
     totals_dict["exchange_rate"] = averange_exchange_rate
 
-    return totals_dict
+    return averange_exchange_rate
