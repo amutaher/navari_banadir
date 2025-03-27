@@ -373,15 +373,30 @@ def get_supplier_emails(supplier_name, primary_mandatory, billing_and_primary=Tr
         return billing_email[0][0] or ""
 
 
+# @frappe.whitelist()
+# def download_statements(document_name):
+#     doc = frappe.get_doc("Suppliers Process Statement Of Accounts", document_name)
+#     report = get_report_pdf(doc)
+#     if report:
+#         frappe.local.response.filename = doc.name + ".pdf"
+#         frappe.local.response.filecontent = report
+#         frappe.local.response.type = "download"
 @frappe.whitelist()
 def download_statements(document_name):
-    doc = frappe.get_doc("Suppliers Process Statement Of Accounts", document_name)
-    report = get_report_pdf(doc)
-    if report:
-        frappe.local.response.filename = doc.name + ".pdf"
-        frappe.local.response.filecontent = report
-        frappe.local.response.type = "download"
-
+    try:
+        doc = frappe.get_doc("Suppliers Process Statement Of Accounts", document_name)
+        
+        report = get_report_pdf(doc)
+        
+        if report:
+            frappe.local.response.filename = doc.name + ".pdf"
+            frappe.local.response.filecontent = report
+            frappe.local.response.type = "download"
+        else:
+            frappe.throw("No report generated")
+    except Exception as e:
+        frappe.logger().error(f"Error in download_statements: {str(e)}")
+        frappe.throw("Failed to generate statement. Please check logs.")
 
 @frappe.whitelist()
 def send_emails(document_name, from_scheduler=False, posting_date=None):
