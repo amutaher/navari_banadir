@@ -1,191 +1,241 @@
 # Copyright (c) 2025, Navari Ltd and contributors
 # For license information, please see license.txt
 
+"""
+Monthly Closing Balance Report
+Shows complete monthly financial position with:
+- Opening Balances
+- Transaction Activity (Debit/Credit)
+- Closing Balances
+for each month in the selected period
+"""
+
 import frappe
-import json
-import os
-from datetime import datetime, date
-from decimal import Decimal
 from frappe import _
-from frappe.utils import flt, getdate, add_months, add_days
+from frappe.utils import getdate, formatdate, flt
+from dateutil.relativedelta import relativedelta
 
-from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
-	get_accounting_dimensions,
-	get_dimension_with_children,
-)
-from ..general_ledger_report.general_ledger_report import (
-	initialize_gle_map,
-    get_accountwise_gle,
-    get_gl_entries,
-	get_data_with_opening_closing
-)
-
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-    if isinstance(obj, (date, datetime)):
-        return obj.isoformat()  # Convert to string format (YYYY-MM-DD)
-    raise TypeError(f"Type {type(obj)} not serializable")
+import erpnext
+from erpnext.accounts.report.trial_balance.trial_balance import execute as trial_balance_execute
+from erpnext.accounts.report.utils import get_currency, convert_to_presentation_currency
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import get_accounting_dimensions
 
 def execute(filters=None):
-    columns = get_columns(filters)
-    data = get_data(filters)
-    return columns, data
+    """
+    Main report execution
+    1. Inherits base functionality from standard Trial Balance report
+    2. Adds monthly breakdown columns
+    3. Processes monthly data
+    """
 
-def get_columns(filters=None):
-    columns = [
-        {"label": _("Account"), "fieldname": "account", "fieldtype": "Data", "width": 300},
-        {"label": _("Currency"), "fieldname": "currency", "fieldtype": "Link", "options": "Currency", "width": 150, "hidden": 1},
-        {"label": _("Indent"), "fieldname": "indent", "fieldtype": "Int", "width": 50, "hidden": 1},
-    ]
+    columns, data = trial_balance_execute(filters)
+
+    company_currency = erpnext.get_company_currency(filters.company)
+    presentation_currency = filters.presentation_currency or company_currency
+
+    monthly_ranges = get_monthly_date_ranges(filters)
+
+    columns = get_monthly_columns(columns, monthly_ranges, presentation_currency)
+
+    monthly_data = process_monthly_data(data, filters, monthly_ranges, company_currency, presentation_currency)
+
+    return columns, monthly_data
+
+def get_monthly_date_ranges(filters):
+
+    monthly_ranges = []
+    current_date = getdate(filters.from_date)
+    end_date = getdate(filters.to_date)
+
+    while current_date <= end_date:
+        month_start = current_date.replace(day=1)
+        month_end = (month_start + relativedelta(months=1, days=-1))
     
-    periods = generate_periods(filters.from_date, filters.to_date, filters.periodicity)
-    for period in periods:
-        # Since periods now returns tuples (label, start_date, end_date), use only the label (first element)
-        period_label = period[0] if isinstance(period, tuple) else period
+        if month_end > end_date:
+            month_end = end_date
+    
+        monthly_ranges.append({
+            "start": month_start,
+            "end": month_end,
+            "label": formatdate(month_start, "MMM YYYY")
+        })
+    
+        current_date = month_end + relativedelta(days=1)
+    
+    return monthly_ranges
+
+def get_monthly_columns(original_columns, monthly_ranges, currency):
+    columns = [
+        original_columns[0], # Account column
+        {
+            "fieldname": "account_currency",
+            "label": _("Currency"),
+            "fieldtype": "Link",
+            "options": "Currency",
+            "width": 80,
+            "hidden": 1
+        }
+    ]  
+    
+    for month in monthly_ranges:
+        month_label = month["label"]
         columns.extend([
+            # Opening Balances
             {
-                "label": _(f"{period_label} Opening"),
-                "fieldname": f"{period_label.lower().replace(' ', '_')}_opening",
+                "fieldname": f"{month_label}_opening_debit",
+                "label": _(f"{month_label} Open (DR)"),
                 "fieldtype": "Currency",
                 "options": "currency",
-                "width": 150
+                "width": 120
             },
             {
-                "label": _(f"{period_label} Debit"),
-                "fieldname": f"{period_label.lower().replace(' ', '_')}_debit",
+                "fieldname": f"{month_label}_opening_credit",
+                "label": _(f"{month_label} Open (CR)"),
                 "fieldtype": "Currency",
                 "options": "currency",
-                "width": 150,
-                # "hidden": 1
+                "width": 120
+            },
+            # Period Activity
+            {
+                "fieldname": f"{month_label}_debit",
+                "label": _(f"{month_label} Debit"),
+                "fieldtype": "Currency",
+                "options": "currency",
+                "width": 120
             },
             {
-                "label": _(f"{period_label} Credit"),
-                "fieldname": f"{period_label.lower().replace(' ', '_')}_credit",
+                "fieldname": f"{month_label}_credit",
+                "label": _(f"{month_label} Credit"),
                 "fieldtype": "Currency",
                 "options": "currency",
-                "width": 150,
-                # "hidden": 1
+                "width": 120
+            },
+            # Closing Balances
+            {
+                "fieldname": f"{month_label}_closing_debit",
+                "label": _(f"{month_label} Close (DR)"),
+                "fieldtype": "Currency",
+                "options": "currency",
+                "width": 120
             },
             {
-                "label": _(f"{period_label} Closing"),
-                "fieldname": f"{period_label.lower().replace(' ', '_')}_closing",
+                "fieldname": f"{month_label}_closing_credit",
+                "label": _(f"{month_label} Close (CR)"),
                 "fieldtype": "Currency",
                 "options": "currency",
-                "width": 150
+                "width": 120
             }
         ])
-
+    
     return columns
 
-def generate_periods(from_date, to_date, periodicity):
-    periods = []
-    current_date = getdate(from_date)
-    end_date = getdate(to_date)
-    
-    while current_date <= end_date:
-        if periodicity == "Monthly":
-            period_label = current_date.strftime("%b %Y")
-            start_date = current_date
-            current_date = add_months(current_date, 1)
-            end_date_period = add_days(current_date, -1)
-        elif periodicity == "Quarterly":
-            quarter = (current_date.month - 1) // 3 + 1
-            period_label = f"Q{quarter} {current_date.year}"
-            start_date = current_date
-            current_date = add_months(current_date, 3)
-            end_date_period = add_days(current_date, -1)
-        else:  # Yearly
-            period_label = str(current_date.year)
-            start_date = current_date
-            current_date = add_months(current_date, 12)
-            end_date_period = add_days(current_date, -1)
-        
-        periods.append((period_label, start_date, end_date_period))
-    
-    return periods
-
-def get_accounts_with_hierarchy(company, root_type=None):
-    query = """
-        SELECT 
-            name,
-            account_name,
-            parent_account,
-            is_group,
-            root_type,
-            lft,
-            rgt,
-            account_currency as currency
-        FROM `tabAccount`
-        WHERE company=%s
+def process_monthly_data(original_data, filters, monthly_ranges, company_currency, presentation_currency):
     """
-    
-    parameters = [company]
-    
-    if root_type:
-        query += " AND root_type=%s"
-        parameters.append(root_type)
-    
-    query += " ORDER BY lft"
-    
-    accounts = frappe.db.sql(query, parameters, as_dict=True)
-    
-    parent_dict = {}
-    for account in accounts:
-        parent_dict[account.name] = account.parent_account
-    
-    for account in accounts:
-        indent = 0
-        parent = account.parent_account
-        while parent:
-            indent += 1
-            parent = parent_dict.get(parent)
-        account.indent = indent
-    
-    return accounts
+    Process account data for monthly breakdown
 
+    1. Initialize data structure for all accounts
+    2. For each month:
+        a. Run trial balance for that month
+        b. Store opening, transaction, and closing values
+        c. Carry forward closing balances to next month
+    """
 
-def get_data(filters=None):
-    data = []
-    periods = generate_periods(filters.from_date, filters.to_date, filters.periodicity)
-    accounts = get_accounts_with_hierarchy(filters.company)
-    accounting_dimensions = get_accounting_dimensions()
+    monthly_account_data = {}
+    
+    # Initialize account structure
+    for row in original_data:
+        if row.get("account"):
+            monthly_account_data[row["account"]] = {
+                "account": row["account"],
+                "account_name": row["account_name"],
+                "account_currency": row.get("account_currency", company_currency),
+                "parent_account": row.get("parent_account"),
+                "indent": row.get("indent", 0),
+                "currency": presentation_currency
+            }
+            
+            # Initialize all monthly fields
+            for month in monthly_ranges:
+                month_label = month["label"]
+                monthly_account_data[row["account"]].update({
+                    f"{month_label}_opening_debit": 0.0,
+                    f"{month_label}_opening_credit": 0.0,
+                    f"{month_label}_debit": 0.0,
+                    f"{month_label}_credit": 0.0,
+                    f"{month_label}_closing_debit": 0.0,
+                    f"{month_label}_closing_credit": 0.0
+                })
 
-    account_balances = {account["name"]: {
-        "account": account["account_name"],
-        "currency": account["currency"],
-        "indent": account["indent"],
-    } for account in accounts}
-
-    for period_label, period_start, period_end in periods:
-        period_filters = filters.copy()
-        period_filters.update({
-            "from_date": period_start,
-            "to_date": period_end,
-            "periodicity": "Monthly"
+    # Process each month sequentially
+    for idx, month in enumerate(monthly_ranges):
+        month_label = month["label"]
+        month_filters = frappe._dict(filters.copy())
+        month_filters.update({
+            "from_date": month["start"],
+            "to_date": month["end"],
+            "presentation_currency": presentation_currency
         })
+        
+        # Get monthly trial balance data
+        _, month_data = trial_balance_execute(month_filters)
+        
+        for row in month_data:
+            if not row.get("account") or not row.get("has_value"):
+                continue
 
-        gl_entries = get_gl_entries(period_filters, accounting_dimensions)
-        period_data = get_data_with_opening_closing(period_filters, accounts, accounting_dimensions, gl_entries)
+            account = monthly_account_data[row["account"]]
+            account_currency = row.get("account_currency", company_currency)
 
-        current_directory = os.getcwd()
-        file_path = os.path.join(current_directory, "myfile.json")
+            if presentation_currency != company_currency:
+                conversion_date = month["end"]
 
-        with open(file_path, 'a', encoding='utf8') as json_file:
-            json.dump(period_data, json_file, ensure_ascii=True, indent=4, default=json_serial)
-            json_file.write("\n")
+                # Convert all balance fields
+                for field in ['opening_debit', 'opening_credit', 'debit', 'credit', 
+                              'closing_debit', 'closing_credit']:
+                    row[field] = convert_currency(
+                        value=row[field],
+                        account_currency=account_currency,
+                        target_currency=presentation_currency,
+                        company=filters.company,
+                        conversion_date=conversion_date
+                    )
+                
+            # Set values from trial balance
+            account.update({
+                f"{month_label}_opening_debit": row["opening_debit"],
+                f"{month_label}_opening_credit": row["opening_credit"],
+                f"{month_label}_debit": row["debit"],
+                f"{month_label}_credit": row["credit"],
+                f"{month_label}_closing_debit": row["closing_debit"],
+                f"{month_label}_closing_credit": row["closing_credit"]
+            })
+            
+            # Carry forward closing to next month's opening
+            if idx < len(monthly_ranges) - 1:
+                next_month_label = monthly_ranges[idx + 1]["label"]
+                monthly_account_data[row["account"]].update({
+                    f"{next_month_label}_opening_debit": row["closing_debit"],
+                    f"{next_month_label}_opening_credit": row["closing_credit"]
+                })
 
-        print(f"Period: {period_label}, Data: {json.dumps(period_data, indent=4,default=json_serial)}")
+    return list(monthly_account_data.values())
 
-        for record in period_data:
-            account_name = record.get("account")
-            if account_name in account_balances:
-                # Store balances under dynamically named keys for each month
-                account_balances[account_name][f"{period_label.lower().replace(' ', '_')}_opening"] = record.get("opening", {}).get("debit", 0) - record.get("opening", {}).get("credit", 0)
-                account_balances[account_name][f"{period_label.lower().replace(' ', '_')}_debit"] = record.get("debit", 0)
-                account_balances[account_name][f"{period_label.lower().replace(' ', '_')}_credit"] = record.get("credit", 0)
-                account_balances[account_name][f"{period_label.lower().replace(' ', '_')}_closing"] = account_balances[account_name][f"{period_label.lower().replace(' ', '_')}_opening"] + record.get("debit", 0) - record.get("credit", 0)
-
-
-    data = list(account_balances.values())
-
-    return data
+def convert_currency(amount, account_currency, target_currency, company, date):
+    """Convert amount to presentation currency"""
+    if account_currency == target_currency:
+        return amount
+    
+    converted_amount = convert_to_presentation_currency(
+        amount,
+        account_currency,
+        target_currency,
+        company,
+        date
+    )
+    
+    if not converted_amount:
+        frappe.msgprint(_("No exchange rate found for {0} to {1} on {2}").format(
+            account_currency, target_currency, date
+        ))
+        
+    return converted_amount or 0.0
