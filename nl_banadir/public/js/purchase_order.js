@@ -28,17 +28,22 @@ frappe.ui.form.on("Purchase Order Item",{
             },
             callback: function(response){
                 if(response.message){
-                  console.log(response.message.rate);
                     frappe.model.set_value(cdt, cdn, "fg_item_qty", response.message.work_order_qty);
                     frappe.model.set_value(cdt, cdn, "fg_item", response.message.upper_stock_items);
                     frappe.model.set_value(cdt, cdn, "qty", response.message.work_order_qty);
-                    frappe.model.set_value(cdt, cdn, "rate", response.message.rate);
+                    if (response.message.rate > 0) {
+                        frappe.model.set_value(cdt, cdn, "rate", response.message.rate);
+                    }
+                    else {
+                    frappe.model.set_value(cdt, cdn, "rate", child.rate);
+                    }
 
                 }
             }
         });
       
-    }
+    },
+
 })
 
 
@@ -91,6 +96,19 @@ frappe.ui.form.on("Purchase Order", {
             }
         })
       }},
+
+
+      onload: function(frm, cdt, cdn){
+        var child = locals[cdt][cdn];
+        frm.set_query("custom_work_order", "items", (frm, cdt, cdn) => {
+          const row = locals[cdt][cdn];
+          return {
+            filters: {
+              "custom_item_group": "FINISHED GOODS INDIA",          
+            },
+          };
+        });
+    },
   });
   
   
