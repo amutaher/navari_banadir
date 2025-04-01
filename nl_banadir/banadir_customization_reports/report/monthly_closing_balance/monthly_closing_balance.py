@@ -184,21 +184,6 @@ def process_monthly_data(original_data, filters, monthly_ranges, company_currenc
                 continue
 
             account = monthly_account_data[row["account"]]
-            account_currency = row.get("account_currency", company_currency)
-
-            if presentation_currency != company_currency:
-                conversion_date = month["end"]
-
-                # Convert all balance fields
-                for field in ['opening_debit', 'opening_credit', 'debit', 'credit', 
-                              'closing_debit', 'closing_credit']:
-                    row[field] = convert_currency(
-                        value=row[field],
-                        account_currency=account_currency,
-                        target_currency=presentation_currency,
-                        company=filters.company,
-                        conversion_date=conversion_date
-                    )
                 
             # Set values from trial balance
             account.update({
@@ -220,22 +205,3 @@ def process_monthly_data(original_data, filters, monthly_ranges, company_currenc
 
     return list(monthly_account_data.values())
 
-def convert_currency(amount, account_currency, target_currency, company, date):
-    """Convert amount to presentation currency"""
-    if account_currency == target_currency:
-        return amount
-    
-    converted_amount = convert_to_presentation_currency(
-        amount,
-        account_currency,
-        target_currency,
-        company,
-        date
-    )
-    
-    if not converted_amount:
-        frappe.msgprint(_("No exchange rate found for {0} to {1} on {2}").format(
-            account_currency, target_currency, date
-        ))
-        
-    return converted_amount or 0.0
