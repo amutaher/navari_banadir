@@ -4,8 +4,6 @@
 import frappe
 from frappe import _
 
-from collections import defaultdict
-
 
 def execute(filters: dict | None = None):
     """Return columns and data for the report.
@@ -20,8 +18,8 @@ def execute(filters: dict | None = None):
     if data:
         average_exchange_rate = calculate_average_exchange_rate(data)
 
-    if average_exchange_rate:
-        data[-1]["average_exchange_rate"] = average_exchange_rate
+        if average_exchange_rate:
+            data[-1]["average_exchange_rate"] = average_exchange_rate
 
     return columns, data
 
@@ -37,39 +35,39 @@ def get_columns() -> list[dict]:
             "fieldname": "name",
             "fieldtype": "Link",
             "options": "Currency Conversion",
-            "width": 300,
+            "width": 200,
         },
         {
             "label": _("Date"),
             "fieldname": "date",
             "fieldtype": "Date",
-            "width": 300,
+            "width": 100,
         },
         {
             "label": _("Amount(USD)"),
             "fieldname": "amount_usd",
             "fieldtype": "Currency",
             "options": "from_currency",
-            "width": 300,
+            "width": 200,
         },
         {
             "label": _("Amount(INR)"),
             "fieldname": "amount_inr",
             "fieldtype": "Currency",
             "options": "to_currency",
-            "width": 300,
+            "width": 200,
         },
         {
             "label": _("Exchange Rate"),
             "fieldname": "exchange_rate",
             "fieldtype": "Float",
-            "width": 300,
+            "width": 100,
         },
         {
             "label": _("Average Exchange Rate"),
             "fieldname": "average_exchange_rate",
             "fieldtype": "Float",
-            "width": 300,
+            "width": 100,
         },
     ]
 
