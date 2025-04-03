@@ -34,15 +34,18 @@ doc_events = {
     "Sales Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.sales_invoice_before_submit",
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.shipping_details.sync_shipping_details",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
     "Purchase Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.purchase_invoice_before_submit",
         "autoname": "nl_banadir.banadir_customization_reports.controllers.purchase_invoice.auto_name",
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.shipping_details.sync_shipping_details",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
     "Payment Entry": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.payment_entry_before_submit",
         "autoname": "nl_banadir.banadir_customization_reports.controllers.payment_entry.auto_name",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
     "Journal Entry": {
         # "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
@@ -51,7 +54,9 @@ doc_events = {
             "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
         ],
         "on_submit": "nl_banadir.banadir_customization_reports.overrides.journal_entry.on_submit",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company_item_level",
     },
+    
     "Production Plan": {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
         "on_submit": "nl_banadir.banadir_customization_reports.controllers.production_plan.sync_sequence",
@@ -63,11 +68,29 @@ doc_events = {
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.work_order.on_update",
     },
     "Stock Entry": {
-        "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save"
+        "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+
     },
     "Sales Shipment Cost": {
         "before_cancel": "nl_banadir.banadir_customization_reports.controllers.sales_shipment_cost.before_cancel",
     },
+    "Sales Order": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+    "Purchase Order": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+    "Purchase Receipt": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+    "Delivery Note": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+    "Stock Reconciliation": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+  
 }
 
 # include js, css files in header of desk.html
