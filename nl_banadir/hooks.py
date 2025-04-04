@@ -25,6 +25,10 @@ fixtures = [
                     "BOM-custom_purchase_order",
                     "BOM-custom_job_charges_rate",
                     "Stock Entry Detail-custom_odd_pairs",
+                    "Journal Entry-custom_accounting_dimensions",
+                    "Journal Entry-custom_branch",
+                    "Journal Entry-custom_column_break_ogh8l",
+                    "Journal Entry-custom_marka",
                 ),
             ]
         ],
@@ -121,6 +125,7 @@ doctype_js = {
     "Payment Entry": "public/js/payment_entry.js",
     "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",
     "Stock Entry": "public/js/stock_entry.js",
+    "Journal Entry": "public/js/journal_entry.js",
 }
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
