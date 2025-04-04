@@ -42,7 +42,7 @@ frappe.query_reports["Gross Profit MultiCurrency"] = {
       label: __("Group By"),
       fieldtype: "Select",
       options:
-        "Invoice\nItem Code\nItem Group\nBrand\nWarehouse\nCustomer\nCustomer Group\nTerritory\nSales Person\nProject\nMonthly\nPayment Term\nBranch",
+        "Invoice\nItem Code\nItem Group\nBrand\nWarehouse\nCustomer\nCustomer Group\nTerritory\nSales Person\nProject\nMonthly\nPayment Term\nBranch\nMarka",
       default: "Invoice",
     },
     {
@@ -99,7 +99,6 @@ frappe.query_reports["Gross Profit MultiCurrency"] = {
       fieldtype: "Link",
       options: "Branch",
     },
-
     {
       fieldname: "presentation_currency",
       label: __("Currency"),
@@ -119,7 +118,7 @@ frappe.query_reports["Gross Profit MultiCurrency"] = {
       options: "UOM",
       width: "100",
       reqd: 0,
-  },
+    },
   ],
   tree: true,
   name_field: "parent",
