@@ -24,6 +24,7 @@ fixtures = [
                     "Salary Component-p9a_tax_deduction_card_type",
                     "BOM-custom_purchase_order",
                     "BOM-custom_job_charges_rate",
+                    "Stock Entry Detail-custom_odd_pairs",
                 ),
             ]
         ],
