@@ -29,6 +29,9 @@ fixtures = [
                     "Journal Entry-custom_branch",
                     "Journal Entry-custom_column_break_ogh8l",
                     "Journal Entry-custom_marka",
+                    "Journal Entry-custom_company_group",
+                    "Journal Entry-custom_cost_center",
+                    "Journal Entry-custom_project",
                 ),
             ]
         ],
@@ -95,6 +98,7 @@ doc_events = {
     "Stock Reconciliation": {
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
+    
   
 }
 
