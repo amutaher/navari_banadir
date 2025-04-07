@@ -42,3 +42,5 @@ def validate_branch_company_item_level(doc , method):
                 _("Branch <b>{0}</B> does not belong to any company.").format(item.branch)
             )
             break
+        
+        

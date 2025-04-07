@@ -11,7 +11,16 @@ frappe.ui.form.on('Journal Entry', {
 
     custom_marka: function(frm) {
         update_child_table(frm);
-    }
+    },
+    custom_company_group: function(frm) {
+        update_child_table(frm);
+    },
+    custom_cost_center: function(frm) {
+        update_child_table(frm);
+    },
+    custom_project: function(frm) {
+        update_child_table(frm);
+    },
 });
 
 frappe.ui.form.on('Journal Entry Account', {
@@ -19,6 +28,9 @@ frappe.ui.form.on('Journal Entry Account', {
         let row = locals[cdt][cdn];
         row.branch = frm.doc.custom_branch || '';
         row.marka = frm.doc.custom_marka || '';
+        row.company_group = frm.doc.custom_company_group || '';
+        row.cost_center = frm.doc.custom_cost_center || '';
+        row.project = frm.doc.custom_project || '';
         frm.refresh_field("accounts");
     }
 });
@@ -28,6 +40,9 @@ function update_child_table(frm) {
         frm.doc.accounts.forEach(row => {
             row.branch = frm.doc.custom_branch || '';
             row.marka = frm.doc.custom_marka || '';
+            row.company_group = frm.doc.custom_company_group || '';
+            row.cost_center = frm.doc.custom_cost_center || '';
+            row.project = frm.doc.custom_project || '';
         });
         frm.refresh_field("accounts");
     }
