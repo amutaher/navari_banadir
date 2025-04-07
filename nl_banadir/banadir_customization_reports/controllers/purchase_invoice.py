@@ -4,6 +4,9 @@ import frappe
 
 def auto_name(doc, method=None):
     if doc.company=="Banadir Steel LTD":
+        if doc.custom_invoice_no:
+            doc.name = doc.custom_invoice_no
+            return
         company_abbr = frappe.db.get_value("Company", doc.company, "abbr")
         if not company_abbr:
             frappe.throw(f"Company abbreviation not found for {doc.company}")
