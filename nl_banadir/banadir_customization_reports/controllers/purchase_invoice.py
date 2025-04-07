@@ -16,18 +16,3 @@ def auto_name(doc, method=None):
         base_name = make_autoname(f"{company_abbr}-.####")
         doc.name = f"{base_name}-{current_year}"
     
-# def get_taxes_and_charges(doc, method=None):
-#     if doc.tax_id and doc.tax_id.startswith('06'):
-       
-#         doc.append('taxes', {
-#             'charge_type': 'On Net Total',
-#             'account_head': '2101 - VAT Payable',
-#             'description': 'VAT 6%',
-#             'tax_amount': doc.total * 0.06
-#         },
-#                    {
-#             'charge_type': 'On Net Total',
-#             'account_head': '2101 - VAT Payable',
-#             'description': 'VAT 6%',
-#             'tax_amount': doc.total * 0.06
-#         })
