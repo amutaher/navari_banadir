@@ -73,7 +73,7 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
     # frappe.throw(str(purchase_invoice.items))
 
     purchase_invoice.insert()
-    validate_accounts(purchase_invoice)
+    # validate_accounts(purchase_invoice)
     purchase_invoice.submit()
 
     frappe.db.set_value(
@@ -92,17 +92,7 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
 
     return purchase_invoice
 
-# def validate_accounts(doc):
-#     """
-#     Validate if the item has a default expense account and cost center.
-#     """
-#     for item in doc.items:
-#         expense_account = item.expense_account
-#         expected_account = get_accounts(item.item_code)
-#         if not expense_account or expense_account != expected_account:
-#             item.expense_account = expected_account
-#             # frappe.set_value("Purchase Invoice Item", item.name, "expense_account", expected_account)
-           
+
 def get_accounts(item_code):
     """
     Fetch the default expense account and cost center for the given item code.
@@ -126,12 +116,13 @@ def on_update(doc, method=None):
     Main function to handle the creation of Purchase Invoices for completed operations.
     """
     validate_operations(doc)
+    validate_operations_seq(doc)
     for operation in doc.custom_subcontractors:
         operation_doc = frappe.get_doc("Work Order Operations Item", operation.get('name'))
 
         # Only consider operations with status "Completed" and invoice_created flag is 0
         if operation_doc.status == "Completed" and operation_doc.invoice_created == 0:
-            
+            # validate_dates(operation_doc)
             create_purchase_invoice(
                 doc=doc,
                 operation=operation_doc,
@@ -180,4 +171,13 @@ def validate_dates(operation_doc):
         frappe.throw("In Progress Date cannot be greater than Completed Date.")
     
     
-   
+def validate_operations_seq(doc, method=None):
+    subcontractors = doc.custom_subcontractors or []
+
+    for i in range(len(subcontractors)):
+        current = subcontractors[i]
+        if current.status == "Completed":
+            if i > 0:
+                previous = subcontractors[i - 1]
+                if previous.status != "Completed":
+                    frappe.throw(f"Operation '{current.operations}' cannot be marked as Completed before '{previous.operations}' is completed.")
