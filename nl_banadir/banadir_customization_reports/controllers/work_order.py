@@ -69,10 +69,13 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
         "item_code": operation.item,
         "qty": operation.completed_qty or 1,
         "rate": operation.rate,
-        "amount": operation.amount
+        "amount": operation.amount,
+        "expense_account": get_accounts(operation.item) if get_accounts(operation.item) else None,
     })
+    # frappe.throw(str(purchase_invoice.items))
 
     purchase_invoice.insert()
+    validate_accounts(purchase_invoice)
     purchase_invoice.submit()
 
     frappe.db.set_value(
@@ -90,6 +93,35 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
     doc.reload()
 
     return purchase_invoice
+
+# def validate_accounts(doc):
+#     """
+#     Validate if the item has a default expense account and cost center.
+#     """
+#     for item in doc.items:
+#         expense_account = item.expense_account
+#         expected_account = get_accounts(item.item_code)
+#         if not expense_account or expense_account != expected_account:
+#             item.expense_account = expected_account
+#             # frappe.set_value("Purchase Invoice Item", item.name, "expense_account", expected_account)
+           
+def get_accounts(item_code):
+    """
+    Fetch the default expense account and cost center for the given item code.
+    """
+    accounts = frappe.get_all(
+        "Item Default",
+        filters={"parenttype": "Item", "parent": item_code},
+        fields=["expense_account", "buying_cost_center"]
+    )
+
+    if accounts:
+        # frappe.throw(str(accounts[0].expense_account))
+        return accounts[0].expense_account,
+    else:
+        frappe.throw(f"No accounts found for item code: {item_code}")
+        
+        
 
 def on_update(doc, method=None):
     """
