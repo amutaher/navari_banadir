@@ -74,6 +74,7 @@ doc_events = {
         "before_save": "nl_banadir.banadir_customization_reports.controllers.work_order.before_save",
         "on_submit": "nl_banadir.banadir_customization_reports.controllers.work_order.on_submit",
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.work_order.on_update",
+        "validate": "nl_banadir.banadir_customization_reports.controllers.work_order.before_save",
     },
     "Stock Entry": {
         "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save",
