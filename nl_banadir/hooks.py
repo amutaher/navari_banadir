@@ -125,7 +125,7 @@ doc_events = {
 doctype_js = {
     "Work Order": "public/js/work_order.js",
     "Purchase Order": "public/js/purchase_order.js",
-    "Production Plan": "public/js/production_plan.js",
+    # "Production Plan": "public/js/production_plan.js",
     "Sales Order": "public/js/sales_order.js",
     "Payment Entry": "public/js/payment_entry.js",
     "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",

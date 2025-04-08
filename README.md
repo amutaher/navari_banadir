@@ -73,6 +73,138 @@ To manage access control and restrictions effectively:
 -   This approach ensured strict adherence to access policies while allowing flexibility for certain user roles.
 
 
+## Manufacturing Customizations
+### Enhanced Work Order and Subcontracting Flow in ERPNext**
+
+This document outlines the customizations made to streamline and control the subcontracting process in ERPNext, starting from the **Production Plan**, cascading through **Work Orders**, and resulting in automated **Purchase Invoices** generation based on subcontractor operations.
+
+----------
+
+## 1. Production Plan Enhancements
+
+### 1.1 Auto Naming
+
+Each `Production Plan` is automatically named in the format:
+
+```
+PP-<Company Abbreviation>-####-<Year>
+
+```
+
+### 1.2 Synchronized Sequence ID
+
+-   A new field `custom_seq_id` is introduced to link `Production Plan Item` and `Sub Assembly Item`.
+    
+-   Sequence starts from the maximum value of existing `custom_seq_id`.
+    
+-   Ensures both child tables have matching item counts and synchronized sequence IDs.
+    
+
+### 1.3 Validation
+
+-   Throws an error if the number of items in `po_items` and `sub_assembly_items` mismatch.
+    
+
+----------
+
+## 2. Work Order Enhancements
+
+### 2.1 Auto Naming
+
+Each `Work Order` is named in the format:
+
+```
+WO-<Company Abbreviation>-#####-<Year>
+
+```
+
+### 2.2 Auto Fetch Sequence ID
+
+-   If linked to a `Production Plan Item` or `Sub Assembly Item`, it fetches and assigns the corresponding `custom_seq_id`.
+    
+
+### 2.3 Auto-populating Subcontractor Operations
+
+-   On `before_save`, if the `custom_subcontractors` table is empty:
+    
+    -   Operations are fetched from `Work Order Item Master` based on the selected production item. The table is found on Item tab Manufacturing.
+        
+    -   Each operation is inserted into the child table with item, rate, amount, and currency which are defimed on teh respective Item Master.
+        
+
+### 2.4 Operation Status Validation
+
+-   On `submit` and `update`, the following validations occur:
+    
+    -   Supplier is mandatory if the status is `In Progress` or `Completed`.
+        
+    -   `Completed Qty` cannot exceed the total `qty` of the work order.
+        
+    -   `In Progress Date` must not be after `Completed Date`.
+        
+    -   Cannot mark an operation as `Completed` if the previous operation is not yet `Completed` (based on sequence).
+        
+
+### 2.5 UI Controls via JS
+
+-   Fields in the subcontractor table become read-only once an invoice is created.
+    
+-   Dynamically disables/enables fields such as `status`, `supplier`, `rate`, etc.
+    
+
+----------
+
+## 3. Purchase Invoice Automation
+
+### 3.1 Invoice Generation Logic
+
+-   During `on_update`, completed operations with no existing invoice trigger the creation of a `Purchase Invoice`.
+    
+-   The invoice includes:
+    
+    -   Supplier
+        
+    -   Item
+        
+    -   Completed Quantity
+        
+    -   Rate
+        
+    -   Amount
+        
+    -   Custom link to Work Order
+        
+    -   Auto-generated invoice number
+        
+
+### 3.2 Invoice Naming Convention
+
+### 3.3 Post-Invoice Actions
+
+-   Marks `invoice_created` as 1 in the operations table.
+    
+-   Updates `invoice` field with the name of the generated purchase invoice.
+    
+-   Adds to `custom_total_operation_cost` of the Work Order.
+    
+
+----------
+
+### 4. Summary of Key Fields Added
+
+| Doctype                         | Field                    | Purpose                                                       |
+|----------------------------------|---------------------------|----------------------------------------------------------------|
+| Production Plan Item            | `custom_seq_id`          | Unique sequence ID shared with sub-assembly items             |
+| Production Plan Sub Assembly Item | `custom_seq_id`        | Matches the sequence ID of related production item            |
+| Work Order                      | `custom_subcontractors`  | Child table to track subcontracting operations                |
+| Work Order Operations Item      | `status`, `supplier`, `rate`, `completed_qty`, `invoice_created`, `invoice` | Operational control and tracking fields |
+| Work Order                      | `custom_total_operation_cost` | Tracks total cost of operations automatically           |
+| Purchase Invoice               | `custom_work_order`, `custom_invoice_no` | Links the invoice to the originating Work Order     |
+
+----------
+
+
+
 More Issues both epending and closed can be found [here](https://docs.google.com/spreadsheets/d/124VRwYit_65p1r9aLSUHhVUYZd_d0evd-U7O8koCH8U/edit?gid=1222425794#gid=1222425794)
 
 
