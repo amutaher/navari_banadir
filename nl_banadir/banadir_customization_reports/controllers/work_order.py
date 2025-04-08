@@ -6,21 +6,19 @@ from datetime import datetime
 
 
 def before_save(doc, method=None):
-    
     if not doc.custom_subcontractors:
         currency = frappe.db.get_value("Company", doc.company, "default_currency")
 
         if doc.production_item:
-            item_code = doc.production_item 
+            item_code = doc.production_item
 
-            # Fetch sub-operations from Work Order Item Master
             sub_operations = frappe.get_all(
-                "Work Order Item Master",  
-                filters={"parent": item_code},  
-                fields=["operations", "item", "rate", "amount"]
+                "Work Order Item Master",
+                filters={"parent": item_code},
+                fields=["operations", "item", "rate", "amount"],
+                order_by="idx asc"  
             )
 
-            # Populate the custom_subcontractors table
             for operation in sub_operations:
                 doc.append("custom_subcontractors", {
                     "operations": operation["operations"],
@@ -28,8 +26,8 @@ def before_save(doc, method=None):
                     "amount": operation["amount"],
                     "item": operation["item"],
                     "currency": currency,
-                   
                 })
+
 
 def on_submit(doc, method=None):
     for operation in doc.custom_subcontractors:
@@ -69,10 +67,13 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
         "item_code": operation.item,
         "qty": operation.completed_qty or 1,
         "rate": operation.rate,
-        "amount": operation.amount
+        "amount": operation.amount,
+        "expense_account": get_accounts(operation.item) if get_accounts(operation.item) else None,
     })
+    # frappe.throw(str(purchase_invoice.items))
 
     purchase_invoice.insert()
+    # validate_accounts(purchase_invoice)
     purchase_invoice.submit()
 
     frappe.db.set_value(
@@ -91,17 +92,37 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
 
     return purchase_invoice
 
+
+def get_accounts(item_code):
+    """
+    Fetch the default expense account and cost center for the given item code.
+    """
+    accounts = frappe.get_all(
+        "Item Default",
+        filters={"parenttype": "Item", "parent": item_code},
+        fields=["expense_account", "buying_cost_center"]
+    )
+
+    if accounts:
+        # frappe.throw(str(accounts[0].expense_account))
+        return accounts[0].expense_account,
+    else:
+        frappe.throw(f"No accounts found for item code: {item_code}")
+        
+        
+
 def on_update(doc, method=None):
     """
     Main function to handle the creation of Purchase Invoices for completed operations.
     """
     validate_operations(doc)
+    validate_operations_seq(doc)
     for operation in doc.custom_subcontractors:
         operation_doc = frappe.get_doc("Work Order Operations Item", operation.get('name'))
 
         # Only consider operations with status "Completed" and invoice_created flag is 0
         if operation_doc.status == "Completed" and operation_doc.invoice_created == 0:
-            
+            # validate_dates(operation_doc)
             create_purchase_invoice(
                 doc=doc,
                 operation=operation_doc,
@@ -150,4 +171,13 @@ def validate_dates(operation_doc):
         frappe.throw("In Progress Date cannot be greater than Completed Date.")
     
     
-   
+def validate_operations_seq(doc, method=None):
+    subcontractors = doc.custom_subcontractors or []
+
+    for i in range(len(subcontractors)):
+        current = subcontractors[i]
+        if current.status == "Completed":
+            if i > 0:
+                previous = subcontractors[i - 1]
+                if previous.status != "Completed":
+                    frappe.throw(f"Operation '{current.operations}' cannot be marked as Completed before '{previous.operations}' is completed.")

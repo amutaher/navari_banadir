@@ -12,17 +12,16 @@ def sync_sequence(doc, method):
     last_seq_id = frappe.db.sql("""
         SELECT MAX(custom_seq_id) 
         FROM `tabProduction Plan Item`
-    """)[0][0] or 0  # Default to 0 if no records exist
+    """)[0][0] or 0  
 
     current_seq_id = last_seq_id + 1
     
     if len(doc.po_items) != len(doc.sub_assembly_items):
-        frappe.throw("The number of items in 'Assembly Items' and 'Sub Assembly Items' must be equal.")
+        frappe.throw(f"The number of items in <span style='color:red';>'Assembly Items'</span> and <span style='color:red';>'Sub Assembly Items'</span> must be equal(<b>{len(doc.po_items)}</b>)")
 
     for idx in range(len(doc.po_items)):
         doc.po_items[idx].custom_seq_id = current_seq_id
         doc.sub_assembly_items[idx].custom_seq_id = current_seq_id
-        # Update directly in the database using set_value
         frappe.db.set_value("Production Plan Item", doc.po_items[idx].name, "custom_seq_id", current_seq_id)
         frappe.db.set_value("Production Plan Sub Assembly Item", doc.sub_assembly_items[idx].name, "custom_seq_id", current_seq_id)
 
