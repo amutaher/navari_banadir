@@ -104,7 +104,6 @@ def get_accounts(item_code):
     )
 
     if accounts:
-        # frappe.throw(str(accounts[0].expense_account))
         return accounts[0].expense_account,
     else:
         frappe.throw(f"No accounts found for item code: {item_code}")
@@ -122,7 +121,6 @@ def on_update(doc, method=None):
 
         # Only consider operations with status "Completed" and invoice_created flag is 0
         if operation_doc.status == "Completed" and operation_doc.invoice_created == 0:
-            # validate_dates(operation_doc)
             create_purchase_invoice(
                 doc=doc,
                 operation=operation_doc,
