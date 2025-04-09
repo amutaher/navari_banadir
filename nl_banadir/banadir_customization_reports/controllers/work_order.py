@@ -18,7 +18,9 @@ def before_save(doc, method=None):
                 fields=["operations", "item", "rate", "amount"],
                 order_by="idx asc"  
             )
-
+            if not sub_operations:
+                 item_link = frappe.utils.get_link_to_form("Item", item_code)
+                 frappe.throw(f"No sub operations found for item code: {item_link}")
             for operation in sub_operations:
                 doc.append("custom_subcontractors", {
                     "operations": operation["operations"],
