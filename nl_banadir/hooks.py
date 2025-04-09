@@ -99,6 +99,9 @@ doc_events = {
     "Stock Reconciliation": {
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
+    "Item":{
+        "validate": "nl_banadir.banadir_customization_reports.controllers.item.validate",
+    }
     
   
 }
