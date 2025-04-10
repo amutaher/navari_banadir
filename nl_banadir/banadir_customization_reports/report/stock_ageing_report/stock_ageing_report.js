@@ -87,6 +87,18 @@ frappe.query_reports["Stock Ageing Report"] = {
 
 	formatter: function (value, row, column, data, default_formatter) {
 		let remove_precision = frappe.query_report.get_filter_value("remove_precision");
+
+		// Check if this is the "Total" row and the column is "average_age"
+		if (!row) {
+			if (column.fieldname === "average_age") {
+				rows = frappe.query_report.data.length - 1;
+				let average = value / rows;
+				if (remove_precision) {
+					return Math.round(average).toLocaleString("en-US");
+				}
+				return default_formatter ? default_formatter(average, row, column, data) : average;
+			}
+		}
 		
 		if (typeof value === "number") {
 			if (remove_precision) {
@@ -95,4 +107,5 @@ frappe.query_reports["Stock Ageing Report"] = {
 		}
 		return default_formatter ? default_formatter(value, row, column, data) : value;
 	},
+
 };
