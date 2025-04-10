@@ -43,4 +43,15 @@ def validate_branch_company_item_level(doc , method):
             )
             break
         
+@frappe.whitelist()
+def check_work_order_ops():
+    work_order = frappe.form_dict.get("work_order")
+    incomplete_ops = frappe.get_all(
+        "Work Order Operations Item",
+        filters={"parent": work_order, "status": ["!=", "Completed"]},
+        pluck="name"
+    )
+    return {"all_completed": len(incomplete_ops) == 0}
+
+        
         

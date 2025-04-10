@@ -1,5 +1,21 @@
 frappe.ui.form.on('Work Order', {
     refresh: function (frm) {
+        if (frm.doc.docstatus === 1) {
+            setTimeout(() => {
+                frappe.call({
+                    method: 'nl_banadir.banadir_customization_reports.utils.utils.check_work_order_ops',
+                    args: {
+                        work_order: frm.doc.name
+                    },
+                    callback: function (r) {
+                        if (r.message && !r.message.all_completed) {
+                            frm.remove_custom_button('Finish');
+                        }
+                    }
+                });
+            }, 1000);
+        }
+
         if (frm.doc.custom_subcontractors) {
             frm.doc.custom_subcontractors.forEach(row => {
                 const fields_to_update = ['status', 'item', 'rate', 'supplier', 'in_progress', 'completed_date'];
@@ -15,11 +31,13 @@ frappe.ui.form.on('Work Order', {
                     });
                 }
             });
-
             frm.refresh_field('custom_subcontractors');
         }
+        
     }
 });
+
+
 
 frappe.ui.form.on('Work Order Operations Item', {
     operations: function (frm, cdt, cdn) {
@@ -36,6 +54,20 @@ frappe.ui.form.on('Work Order Operations Item', {
             frappe.msgprint(__('Please select a company in the Work Order.'));
         }
     },
+    in_progress_date: function (frm, cdt, cdn) {
+           
+        const row = locals[cdt][cdn];
+        if (row.in_progress_date && row.in_progress_date != null && row.completed_date == null) {
+            frappe.model.set_value(cdt, cdn, "status", "In Progress");
+        }
+       
+    },
+    completed_date: function (frm, cdt, cdn){
+        const row = locals[cdt][cdn];
+        if (row.completed_date && row.completed_date != null) {
+            frappe.model.set_value(cdt, cdn, "status", "Completed");
+        }
+    }
    
 });
 

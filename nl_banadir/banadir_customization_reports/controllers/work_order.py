@@ -3,6 +3,7 @@ import frappe
 
 from frappe.model.naming import make_autoname
 from datetime import datetime
+from frappe import _
 
 
 def before_save(doc, method=None):
@@ -28,10 +29,18 @@ def before_save(doc, method=None):
                     "amount": operation["amount"],
                     "item": operation["item"],
                     "currency": currency,
-                })
+                })     
+            
+            
+def validate_rate(doc):
+    if doc.custom_subcontractors:
+        for row in doc.custom_subcontractors:
+            if row.rate <= 0:
+                frappe.throw(_("Rate cannot be 0 or less for operation <b>{0}</b>").format(row.operations))  
 
 
 def on_submit(doc, method=None):
+    validate_rate(doc)
     for operation in doc.custom_subcontractors:
         if (operation.status == "In Progress" or operation.status == "Completed") and operation.supplier is None:
             frappe.throw("Kindly enter the supplier in Sub-contractor table")
