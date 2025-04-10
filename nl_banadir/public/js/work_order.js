@@ -21,6 +21,7 @@ frappe.ui.form.on('Work Order', {
     }
 });
 
+
 frappe.ui.form.on('Work Order Operations Item', {
     operations: function (frm, cdt, cdn) {
         const row = locals[cdt][cdn];
@@ -36,6 +37,20 @@ frappe.ui.form.on('Work Order Operations Item', {
             frappe.msgprint(__('Please select a company in the Work Order.'));
         }
     },
+    in_progress_date: function (frm, cdt, cdn) {
+           
+        const row = locals[cdt][cdn];
+        if (row.in_progress_date && row.in_progress_date != null && row.completed_date == null) {
+            frappe.model.set_value(cdt, cdn, "status", "In Progress");
+        }
+       
+    },
+    completed_date: function (frm, cdt, cdn){
+        const row = locals[cdt][cdn];
+        if (row.completed_date && row.completed_date != null) {
+            frappe.model.set_value(cdt, cdn, "status", "Completed");
+        }
+    }
    
 });
 
