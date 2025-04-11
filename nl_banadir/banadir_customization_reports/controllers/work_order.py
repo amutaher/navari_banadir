@@ -41,6 +41,7 @@ def validate_rate(doc):
 
 def on_submit(doc, method=None):
     is_finished_good_work_order(doc)
+    validate_source_warehouse(doc)
     validate_rate(doc)
     for operation in doc.custom_subcontractors:
         if (operation.status == "In Progress" or operation.status == "Completed") and operation.supplier is None:
@@ -200,11 +201,24 @@ def is_finished_good_work_order(doc):
         return False
     
 def is_insole_complete(seq_id):
-    work_order = frappe.db.get_value("Work Order", {"custom_seq_id": seq_id}, "name")
+    work_order = frappe.get_value(
+    "Work Order",
+    {
+        "custom_seq_id": seq_id,
+        "production_plan_sub_assembly_item": ["Is", "Set"]
+    },
+    "name"
+)
+
     if not work_order:
-        return False
+        return frappe.throw(f"No Work Order found for the given custom_seq_id: {seq_id}")
     work_order_doc = frappe.get_doc("Work Order", work_order)
     if work_order_doc.status in ["Completed", "Closed"]:
         return True
     work_order_link = frappe.utils.get_link_to_form("Work Order", work_order)
     return frappe.throw(f"Insole Work Order {work_order_link} is not Completed or Closed.")
+
+def validate_source_warehouse(doc):
+    if doc.source_warehouse is None:
+        frappe.throw("Kindly enter the <b>Source warehouse</b>")
+        
