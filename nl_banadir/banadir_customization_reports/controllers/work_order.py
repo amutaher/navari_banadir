@@ -170,6 +170,9 @@ def validate_operations(doc):
         if operation_doc.status == "Completed" and (operation_doc.in_progress_date > operation_doc.completed_date):
             frappe.throw("<b>In Progress Date</b> cannot be greater than <b>Completed Date.</b>")
         
+        if operation_doc.status == "Completed" and operation_doc.completed_qty <= 0:
+            frappe.throw("Completed quantity must be greater than 0 for completed operations.")
+            
         if operation_doc.status in ["In Progress", "Completed"]:
             if operation_doc.completed_qty > doc.qty:
                 frappe.throw(
