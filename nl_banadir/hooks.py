@@ -89,6 +89,7 @@ doc_events = {
     },
     "Purchase Order": {
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+        "before_save": "nl_banadir.banadir_customization_reports.controllers.purchase_order.before_save",
     },
     "Purchase Receipt": {
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",

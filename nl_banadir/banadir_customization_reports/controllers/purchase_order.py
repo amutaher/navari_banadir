@@ -1,4 +1,6 @@
 import frappe
+from frappe import _
+from nl_banadir.banadir_customization_reports.controllers.work_order import get_accounts, validate_insole_complete
 
 @frappe.whitelist()
 def get_items_from_production_plan(production_plan):
@@ -58,4 +60,5 @@ def get_job_charges_rate(work_order):
     return bom.custom_job_charges_rate or 0.0
     
 
-
+def before_save(doc, method=None):
+    validate_insole_complete(doc)
