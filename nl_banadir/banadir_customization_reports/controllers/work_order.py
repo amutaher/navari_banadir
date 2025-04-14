@@ -46,6 +46,7 @@ def on_submit(doc, method=None):
     for operation in doc.custom_subcontractors:
         if (operation.status == "In Progress" or operation.status == "Completed") and operation.supplier is None:
             frappe.throw("Kindly enter the supplier in Sub-contractor table")
+    frappe.throw("Work Order submitted successfully.")
 
 
 def generate_invoice_number(item_code, company_abbr):
@@ -170,6 +171,9 @@ def validate_operations(doc):
         if operation_doc.status == "Completed" and (operation_doc.in_progress_date > operation_doc.completed_date):
             frappe.throw("<b>In Progress Date</b> cannot be greater than <b>Completed Date.</b>")
         
+        if operation_doc.status == "Completed" and operation_doc.completed_qty <= 0:
+            frappe.throw("Completed quantity must be greater than 0 for completed operations.")
+            
         if operation_doc.status in ["In Progress", "Completed"]:
             if operation_doc.completed_qty > doc.qty:
                 frappe.throw(
@@ -197,6 +201,7 @@ def validate_operations_seq(doc, method=None):
 def is_finished_good_work_order(doc):
     if doc.production_plan_sub_assembly_item is None and doc.production_plan_item is not None:
         is_insole_complete(doc.custom_seq_id)
+        validate_subcontracting_receipts(doc)
     else:
         return False
     
@@ -222,3 +227,38 @@ def validate_source_warehouse(doc):
     if doc.source_warehouse is None:
         frappe.throw("Kindly enter the <b>Source warehouse</b>")
         
+#Purchase order validate insole complete
+def validate_insole_complete(doc):
+    for item in doc.items:
+        if item.custom_work_order:
+            work_order = frappe.get_doc("Work Order", item.custom_work_order)
+            is_finished_good_work_order(work_order)
+
+def validate_subcontracting_receipts(doc):
+    po_items = frappe.get_all(
+        "Purchase Order Item",
+        filters={"custom_work_order": doc.name},
+        fields=["parent"]
+    )
+    if not po_items:
+        frappe.throw(_("No Purchase Order Items found linked to this Work Order."))
+
+    purchase_order_names = list(set([item.parent for item in po_items]))
+    
+    subcontracting_orders = frappe.get_all(
+        "Subcontracting Order",
+        filters={"purchase_order": ["in", purchase_order_names]},
+        fields=["name"]
+    )
+    if not subcontracting_orders:
+        frappe.throw(_("No Subcontracting Orders found for related Purchase Orders."))
+
+    subcontracting_order_names = [so.name for so in subcontracting_orders]
+
+    receipts = frappe.get_all(
+        "Subcontracting Receipt Item",
+        filters={"subcontracting_order": ["in", subcontracting_order_names], "docstatus": 1},
+        limit=1
+    )
+    if not receipts:
+        frappe.throw(_("At least one Subcontracting Receipt must be created before submitting this Work Order."))
