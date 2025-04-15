@@ -3,6 +3,7 @@
 import frappe
 from frappe.model.naming import make_autoname
 from datetime import datetime
+from frappe import _
 
 def sync_sequence(doc, method):
     """
