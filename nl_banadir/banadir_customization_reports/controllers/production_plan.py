@@ -60,3 +60,15 @@ def get_seq_id(_item, doc):
     )
     return seq_id
 
+
+def before_save(doc, method):
+    validate_finished_insole(doc)
+    
+def validate_finished_insole(doc):
+    if not hasattr(doc, 'po_items') or not hasattr(doc, 'sub_assembly_items'):
+        frappe.throw("Both child tables (Production Plan Item and Sub Assembly Item) must exist")
+    
+    if len(doc.po_items) != len(doc.sub_assembly_items):
+        frappe.throw(f"The number of items in <span style='color:red';>'Finished Goods Items'</span> and <span style='color:red';>'Sub Assembly Items'</span> must be equal (<b>{len(doc.po_items)}</b>)")
+    
+
