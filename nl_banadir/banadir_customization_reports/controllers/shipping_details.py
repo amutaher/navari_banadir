@@ -1,5 +1,11 @@
 import frappe
 
+from frappe import _
+from nl_banadir.banadir_customization_reports.overrides.sales_invoice import (
+    update_shipping_details_on_save_after_submit,
+)
+
+
 
 def sync_shipping_details(doc, method):
     """
@@ -72,6 +78,7 @@ def process_shipping_sync(doc):
 
         frappe.db.set_value(
             inv.parenttype, inv.parent, values_to_update, update_modified=True
+
         )
 
         frappe.logger().info(
@@ -79,3 +86,5 @@ def process_shipping_sync(doc):
         )
 
     frappe.db.commit()
+
+    update_shipping_details_on_save_after_submit(doc)
