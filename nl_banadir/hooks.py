@@ -24,6 +24,14 @@ fixtures = [
                     "Salary Component-p9a_tax_deduction_card_type",
                     "BOM-custom_purchase_order",
                     "BOM-custom_job_charges_rate",
+                    "Stock Entry Detail-custom_odd_pairs",
+                    "Journal Entry-custom_accounting_dimensions",
+                    "Journal Entry-custom_branch",
+                    "Journal Entry-custom_column_break_ogh8l",
+                    "Journal Entry-custom_marka",
+                    "Journal Entry-custom_company_group",
+                    "Journal Entry-custom_cost_center",
+                    "Journal Entry-custom_project",
                 ),
             ]
         ],
@@ -36,15 +44,18 @@ doc_events = {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.sales_invoice_before_submit",
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.shipping_details.sync_shipping_details",
         "on_cancel": "nl_banadir.banadir_customization_reports.overrides.sales_invoice.on_cancel",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
     "Purchase Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.purchase_invoice_before_submit",
         "autoname": "nl_banadir.banadir_customization_reports.controllers.purchase_invoice.auto_name",
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.shipping_details.sync_shipping_details",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
     "Payment Entry": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.payment_entry_before_submit",
         "autoname": "nl_banadir.banadir_customization_reports.controllers.payment_entry.auto_name",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
     "Journal Entry": {
         # "before_save": "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
@@ -53,23 +64,50 @@ doc_events = {
             "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
         ],
         "on_submit": "nl_banadir.banadir_customization_reports.overrides.journal_entry.on_submit",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company_item_level",
     },
+    
     "Production Plan": {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
         "on_submit": "nl_banadir.banadir_customization_reports.controllers.production_plan.sync_sequence",
+        "before_save": "nl_banadir.banadir_customization_reports.controllers.production_plan.before_save",
     },
     "Work Order": {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
         "before_save": "nl_banadir.banadir_customization_reports.controllers.work_order.before_save",
         "on_submit": "nl_banadir.banadir_customization_reports.controllers.work_order.on_submit",
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.work_order.on_update",
+        "validate": "nl_banadir.banadir_customization_reports.controllers.work_order.before_save",
     },
     "Stock Entry": {
-        "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save"
+        "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save",
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+
     },
     "Sales Shipment Cost": {
         "before_cancel": "nl_banadir.banadir_customization_reports.controllers.sales_shipment_cost.before_cancel",
     },
+    "Sales Order": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+    "Purchase Order": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+        "before_save": "nl_banadir.banadir_customization_reports.controllers.purchase_order.before_save",
+    },
+    "Purchase Receipt": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+    "Delivery Note": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+    "Stock Reconciliation": {
+        "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+    },
+    "Item":{
+        "validate": "nl_banadir.banadir_customization_reports.controllers.item.validate",
+    }
+    
+  
 }
 
 # include js, css files in header of desk.html
@@ -99,6 +137,7 @@ doctype_js = {
     "Payment Entry": "public/js/payment_entry.js",
     "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",
     "Stock Entry": "public/js/stock_entry.js",
+    "Journal Entry": "public/js/journal_entry.js",
 }
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}

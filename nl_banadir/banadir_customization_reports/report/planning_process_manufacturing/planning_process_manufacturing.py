@@ -53,6 +53,8 @@ def get_columns(filters):
                 {"label":"B Qty", "fieldname":"b_qty_issued", "fieldtype":int_or_float(filters), "width":120},
 
         {"label":"Rejected Qty", "fieldname":"rejected_qty_issued", "fieldtype":int_or_float(filters), "width":120},
+        {"label":"Odd Qty", "fieldname":"odd_qty", "fieldtype":int_or_float(filters), "width":120},
+
         {"label":"Balance(In Machine)", "fieldname":"balance_to_issue", "fieldtype":int_or_float(filters), "width":120},
                 {"label":"Stock Entry", "fieldname":"stock_entry", "fieldtype":"Link","options":"Stock Entry", "width":120},
     ]
@@ -262,6 +264,7 @@ def update_stock_details(record):
     
     # Initialize variables to avoid UnboundLocalError
     rejected_qty_issued = 0
+    odd_qty = 0
     is_finished_item_qty = 0
     b_qty_issued = 0
     
@@ -272,11 +275,14 @@ def update_stock_details(record):
             is_finished_item_qty = item.qty or 0
         if item.item_group == "B STOCK":
             b_qty_issued += item.qty
+        if item.is_scrap_item == 1 and item.custom_odd_pairs == 1:
+            odd_qty += item.qty or 0
     
     record.update({
         "stock_entry": stock_entry,
         "rejected_qty_issued": rejected_qty_issued,
         "fresh_qty_issued":is_finished_item_qty,
+        "odd_qty": odd_qty,
         "b_qty_issued": b_qty_issued,
         "balance_to_issue": qty_issued_machine - (is_finished_item_qty + rejected_qty_issued+b_qty_issued),
     })
