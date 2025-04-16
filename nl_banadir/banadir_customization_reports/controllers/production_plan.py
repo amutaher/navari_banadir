@@ -102,7 +102,6 @@ def split_sub_assembly(production_plan):
     """Split sub-assembly items based on custom_split_no"""
     plan_doc = frappe.get_doc("Production Plan", production_plan)
 
-    # Process splitting
     items_to_split = get_items_to_split(plan_doc.sub_assembly_items)
     new_items = []
 
@@ -114,7 +113,9 @@ def split_sub_assembly(production_plan):
 
     # Update document
     remove_items_and_add_new(plan_doc, "sub_assembly_items", items_to_split, new_items)
-    reset_indices(plan_doc.po_items)
+
+    reset_indices(plan_doc.sub_assembly_items)
+
     plan_doc.save()
     plan_doc.reload()
     return plan_doc
