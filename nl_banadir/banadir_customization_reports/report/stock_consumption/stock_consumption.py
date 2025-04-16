@@ -18,11 +18,38 @@ def execute(filters=None):
 def get_columns():
     """Define report columns"""
     return [
-        {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 120},
-        {"label": "Warehouse", "fieldname": "warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 120},
-        {"label": "Avg Consumption Time (Days)", "fieldname": "avg_consumption_time", "fieldtype": "Float", "width": 180},
-        {"label": "Fastest Consumption (Days)", "fieldname": "fastest", "fieldtype": "Int", "width": 150},
-        {"label": "Slowest Consumption (Days)", "fieldname": "slowest", "fieldtype": "Int", "width": 150},
+        {
+            "label": "Item Code",
+            "fieldname": "item_code",
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 120,
+        },
+        {
+            "label": "Warehouse",
+            "fieldname": "warehouse",
+            "fieldtype": "Link",
+            "options": "Warehouse",
+            "width": 120,
+        },
+        {
+            "label": "Avg Consumption Time (Days)",
+            "fieldname": "avg_consumption_time",
+            "fieldtype": "Float",
+            "width": 180,
+        },
+        {
+            "label": "Fastest Consumption (Days)",
+            "fieldname": "fastest",
+            "fieldtype": "Int",
+            "width": 150,
+        },
+        {
+            "label": "Slowest Consumption (Days)",
+            "fieldname": "slowest",
+            "fieldtype": "Int",
+            "width": 150,
+        },
     ]
 
 
@@ -32,7 +59,7 @@ def format_data(consumption_data):
 
     for (item_code, warehouse), details in consumption_data.items():
         consumption_times = details["consumption_times"]
-        
+
         if not consumption_times:
             continue  # Skip if no consumption records exist
 
@@ -40,15 +67,18 @@ def format_data(consumption_data):
         fastest = min(consumption_times)
         slowest = max(consumption_times)
 
-        data.append({
-            "item_code": item_code,
-            "warehouse": warehouse,
-            "avg_consumption_time": avg_consumption_time,
-            "fastest": fastest,
-            "slowest": slowest,
-        })
+        data.append(
+            {
+                "item_code": item_code,
+                "warehouse": warehouse,
+                "avg_consumption_time": avg_consumption_time,
+                "fastest": fastest,
+                "slowest": slowest,
+            }
+        )
 
     return data
+
 
 class ConsumptionTracker:
     """Tracks how long it takes to completely consume a stock item from when it was purchased or received"""
@@ -60,12 +90,14 @@ class ConsumptionTracker:
 
     def generate(self) -> dict:
         """
-            Returns a dictionary structured as:
-            Key = (Item, Warehouse)
-            Value = List of consumption durations for different batches of stock
+        Returns a dictionary structured as:
+        Key = (Item, Warehouse)
+        Value = List of consumption durations for different batches of stock
         """
 
-        stock_ledger_entries = self.sle if self.sle else self.__get_stock_ledger_entries()
+        stock_ledger_entries = (
+            self.sle if self.sle else self.__get_stock_ledger_entries()
+        )
 
         for entry in stock_ledger_entries:
             key, fifo_queue = self.__init_key_store(entry)
@@ -76,7 +108,7 @@ class ConsumptionTracker:
                 self.record_outgoing_stock(entry, fifo_queue)
 
         return self.item_details
-    
+
     def __init_key_store(self, row: dict) -> tuple:
         """Initialize the FIFO queue for each item and warehouse"""
         key = (row.item_code, row.warehouse)
@@ -84,7 +116,7 @@ class ConsumptionTracker:
         fifo_queue = self.item_details[key]["fifo_queue"]
 
         return key, fifo_queue
-    
+
     def __record_incoming_stock(self, row: dict, fifo_queue: list):
         """Record stock received with its date."""
         fifo_queue.append([row.actual_qty, row.posting_date])
@@ -93,7 +125,7 @@ class ConsumptionTracker:
         """Track stock consumption and calculate consumption time."""
         if not fifo_queue:
             return
-        
+
         qty_to_consume = abs(row.actual_qty)
         key = (row.item_code, row.warehouse)
 
@@ -152,7 +184,10 @@ class ConsumptionTracker:
         elif self.filters.get("warehouse_type"):
             warehouses = frappe.get_all(
                 "Warehouse",
-                filters={"warehouse_type": self.filters.get("warehouse_type"), "is_group": 0},
+                filters={
+                    "warehouse_type": self.filters.get("warehouse_type"),
+                    "is_group": 0,
+                },
                 pluck="name",
             )
 
@@ -162,12 +197,18 @@ class ConsumptionTracker:
         sle_query = sle_query.orderby(sle.posting_datetime, sle.creation)
 
         return sle_query.run(as_dict=True)
-    
+
     def __get_item_query(self) -> str:
         item_table = frappe.qb.DocType("Item")
 
         item = frappe.qb.from_("Item").select(
-            "name", "item_name", "description", "stock_uom", "brand", "item_group", "has_serial_no"
+            "name",
+            "item_name",
+            "description",
+            "stock_uom",
+            "brand",
+            "item_group",
+            "has_serial_no",
         )
 
         if self.filters.get("item_code"):
@@ -177,10 +218,12 @@ class ConsumptionTracker:
             item = item.where(item_table.brand == self.filters.get("brand"))
 
         return item
-    
+
     def __get_warehouse_conditions(self, sle, sle_query) -> str:
         warehouse = frappe.qb.DocType("Warehouse")
-        lft, rgt = frappe.db.get_value("Warehouse", self.filters.get("warehouse"), ["lft", "rgt"])
+        lft, rgt = frappe.db.get_value(
+            "Warehouse", self.filters.get("warehouse"), ["lft", "rgt"]
+        )
 
         warehouse_results = (
             frappe.qb.from_(warehouse)

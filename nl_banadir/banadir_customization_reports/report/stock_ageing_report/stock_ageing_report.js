@@ -2,110 +2,115 @@
 // For license information, please see license.txt
 
 frappe.query_reports["Stock Ageing Report"] = {
-	filters: [
-		{
-			fieldname: "company",
-			label: __("Company"),
-			fieldtype: "Link",
-			options: "Company",
-			default: frappe.defaults.get_user_default("Company"),
-			reqd: 1,
-		},
-		{
-			fieldname: "to_date",
-			label: __("As On Date"),
-			fieldtype: "Date",
-			default: frappe.datetime.get_today(),
-			reqd: 1,
-		},
-		{
-			fieldname: "warehouse_type",
-			label: __("Warehouse Type"),
-			fieldtype: "Link",
-			width: "80",
-			options: "Warehouse Type",
-		},
-		{
-			fieldname: "warehouse",
-			label: __("Warehouse"),
-			fieldtype: "Link",
-			options: "Warehouse",
-			get_query: () => {
-				let warehouse_type = frappe.query_report.get_filter_value("warehouse_type");
-				let company = frappe.query_report.get_filter_value("company");
-				return {
-					filters: {
-						...(warehouse_type && { warehouse_type }),
-						...(company && { company }),
-					},
-				};
-			},
-		},
-		{
-			fieldname: "item_code",
-			label: __("Item"),
-			fieldtype: "Link",
-			options: "Item",
-		},
-        {
-            fieldname: "alternative_uom",
-            label: "Alternative UOM",
-            fieldtype: "Link",
-            options: "UOM"
-        },
-		{
-			fieldname: "brand",
-			label: __("Brand"),
-			fieldtype: "Link",
-			options: "Brand",
-		},
-		{
-			fieldname: "range",
-			label: __("Ageing Range"),
-			fieldtype: "Data",
-			default: "30, 60, 90",
-		},
-		{
-			fieldname: "show_warehouse_wise_stock",
-			label: __("Show Warehouse-wise Stock"),
-			fieldtype: "Check",
-			default: 0,
-		},
-        {
-            fieldname: "remove_precision",
-            label: __("Remove Precision"),
-            fieldtype: "Check",
-            default: 1,
-        },
-		{
-			fieldname: "period_for_qty_sold",
-			label: __("Period For Qty Sold"),
-			fieldtype: "Check",
-			default: 0,
-		}
-	],
+  filters: [
+    {
+      fieldname: "company",
+      label: __("Company"),
+      fieldtype: "Link",
+      options: "Company",
+      default: frappe.defaults.get_user_default("Company"),
+      reqd: 1,
+    },
+    {
+      fieldname: "to_date",
+      label: __("As On Date"),
+      fieldtype: "Date",
+      default: frappe.datetime.get_today(),
+      reqd: 1,
+    },
+    {
+      fieldname: "warehouse_type",
+      label: __("Warehouse Type"),
+      fieldtype: "Link",
+      width: "80",
+      options: "Warehouse Type",
+    },
+    {
+      fieldname: "warehouse",
+      label: __("Warehouse"),
+      fieldtype: "Link",
+      options: "Warehouse",
+      get_query: () => {
+        let warehouse_type =
+          frappe.query_report.get_filter_value("warehouse_type");
+        let company = frappe.query_report.get_filter_value("company");
+        return {
+          filters: {
+            ...(warehouse_type && { warehouse_type }),
+            ...(company && { company }),
+          },
+        };
+      },
+    },
+    {
+      fieldname: "item_code",
+      label: __("Item"),
+      fieldtype: "Link",
+      options: "Item",
+    },
+    {
+      fieldname: "alternative_uom",
+      label: "Alternative UOM",
+      fieldtype: "Link",
+      options: "UOM",
+    },
+    {
+      fieldname: "brand",
+      label: __("Brand"),
+      fieldtype: "Link",
+      options: "Brand",
+    },
+    {
+      fieldname: "range",
+      label: __("Ageing Range"),
+      fieldtype: "Data",
+      default: "30, 60, 90",
+    },
+    {
+      fieldname: "show_warehouse_wise_stock",
+      label: __("Show Warehouse-wise Stock"),
+      fieldtype: "Check",
+      default: 0,
+    },
+    {
+      fieldname: "remove_precision",
+      label: __("Remove Precision"),
+      fieldtype: "Check",
+      default: 1,
+    },
+    {
+      fieldname: "period_for_qty_sold",
+      label: __("Period For Qty Sold"),
+      fieldtype: "Check",
+      default: 0,
+    },
+  ],
 
-	formatter: function (value, row, column, data, default_formatter) {
-		let remove_precision = frappe.query_report.get_filter_value("remove_precision");
+  formatter: function (value, row, column, data, default_formatter) {
+    let remove_precision =
+      frappe.query_report.get_filter_value("remove_precision");
 
-		// Check if this is the "Total" row and the column is "average_age"
-		if (!row) {
-			if (column.fieldname === "average_age") {
-				rows = frappe.query_report.data.length - 1;
-				let average = value / rows;
-				if (remove_precision) {
-					return Math.round(average).toLocaleString("en-US");
-				}
-				return default_formatter ? default_formatter(average, row, column, data) : average;
-			}
-		}
-		
-		if (typeof value === "number") {
-			if (remove_precision) {
-				return Math.round(value).toLocaleString("en-US");
-			}
-		}
-		return default_formatter ? default_formatter(value, row, column, data) : value;
-	},
+    // Check if this is the "Total" row and the column is "average_age"
+    if (!row) {
+      if (column.fieldname === "average_age") {
+        rows = frappe.query_report.data.length - 1;
+        let average = value / rows;
+        if (remove_precision) {
+          return Math.round(average).toLocaleString("en-US");
+        }
+        return default_formatter
+          ? default_formatter(average, row, column, data)
+          : average;
+      }
+    }
 
+    if (typeof value === "number") {
+      if (remove_precision) {
+        return Math.round(value).toLocaleString("en-US");
+      }
+    }
+    return default_formatter
+      ? default_formatter(value, row, column, data)
+      : value;
+  },
 };

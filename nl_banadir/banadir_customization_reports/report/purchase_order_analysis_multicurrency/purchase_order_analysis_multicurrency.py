@@ -10,7 +10,7 @@ import frappe
 from frappe import _
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import date_diff, flt, getdate
-from erpnext.accounts.report.utils import convert, get_rate_as_at
+from erpnext.accounts.report.utils import convert
 from nl_banadir.banadir_customization_reports.report.utils import format_in_lakhs
 
 
@@ -574,7 +574,6 @@ def convert_to_party_currency(data, filters):
 
 def billing_currency(data, filters):
     if filters.get("in_party_currency") == 1:
-
         for entry in data:
             supplier_currency = frappe.db.get_value(
                 "Supplier", entry["supplier"], "default_currency"

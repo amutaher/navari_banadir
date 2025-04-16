@@ -3,9 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import nowdate
 from frappe.query_builder import DocType
-from erpnext.accounts.report.utils import convert
 
 
 def execute(filters=None):
@@ -14,102 +12,110 @@ def execute(filters=None):
 
     return columns, data
 
+
 def get_columns(filters=None):
     columns = [
         {
-            "label": "Invoice Number", 
-            "fieldname": "invoice_number", 
-            "fieldtype": "Link", 
+            "label": "Invoice Number",
+            "fieldname": "invoice_number",
+            "fieldtype": "Link",
             "options": "Sales Invoice",
-            "width": "220"
+            "width": "220",
         },
         {
-            "label": "Landed Cost", 
-            "fieldname": "landed_cost", 
+            "label": "Landed Cost",
+            "fieldname": "landed_cost",
             "fieldtype": "Link",
             "options": "Sales Shipment Cost",
-            "width": "220"
+            "width": "220",
         },
         {
-            "label": "Expense Booked", 
-            "fieldname": "expense_booked", 
+            "label": "Expense Booked",
+            "fieldname": "expense_booked",
             "fieldtype": "Currency",
             "options": "currency",
-            "width": "150"
+            "width": "150",
         },
         {
-            "label": "Amount", 
-            "fieldname": "amount", 
+            "label": "Amount",
+            "fieldname": "amount",
             "fieldtype": "Currency",
             "options": "currency",
-            "width": "150"
+            "width": "150",
         },
         {
-            "label": "Currency", 
-            "fieldname": "currency", 
+            "label": "Currency",
+            "fieldname": "currency",
             "fieldtype": "Link",
             "options": "Currency",
             "width": "100",
-            "hidden": 1
+            "hidden": 1,
         },
         {
-            "label": "Container No", 
-            "fieldname": "container_no", 
+            "label": "Container No",
+            "fieldname": "container_no",
             "fieldtype": "Data",
-            "width": "140"
+            "width": "140",
         },
         {
-            "label": "BL Number", 
-            "fieldname": "bl_number", 
+            "label": "BL Number",
+            "fieldname": "bl_number",
             "fieldtype": "Data",
-            "width": "140"
+            "width": "140",
         },
-        {
-            "label": "Description", 
-            "fieldname": "description", 
-            "fieldtype": "Data"
-        }
+        {"label": "Description", "fieldname": "description", "fieldtype": "Data"},
     ]
 
     if filters.get("currency"):
         convert_currency = filters.get("currency")
-        columns.insert(5, {
-            "label": f"Exchange Rate",
-            "fieldname": "exchange_rate",
-            "fieldtype": "Float",
-            "width": "150"
-        })
+        columns.insert(
+            5,
+            {
+                "label": "Exchange Rate",
+                "fieldname": "exchange_rate",
+                "fieldtype": "Float",
+                "width": "150",
+            },
+        )
         # columns.insert(7, {
         #     "label": f"Exchange Date",
         #     "fieldname": "exchange_date",
         #     "fieldtype": "Date",
         #     "width": "150"
         # })
-        columns.insert(4, {
-            "label": f"Amount ({convert_currency})",
-            "fieldname": "amount_in_currency",
-            "fieldtype": "Currency",
-            "options": "selected_currency",
-            "width": "150"
-
-        })
-        columns.insert(3, {
-            "label": f"Expense Booked ({convert_currency})",
-            "fieldname": "expense_booked_in_currency",
-            "fieldtype": "Currency",
-            "options": "selected_currency",
-            "width": "170"
-        })
-        columns.append({
-            "label": "Selected Currency",
-            "fieldname": "selected_currency",
-            "fieldtype": "Link",
-            "options": "Currency",
-            "width": "120",
-            "hidden": 1
-        })
+        columns.insert(
+            4,
+            {
+                "label": f"Amount ({convert_currency})",
+                "fieldname": "amount_in_currency",
+                "fieldtype": "Currency",
+                "options": "selected_currency",
+                "width": "150",
+            },
+        )
+        columns.insert(
+            3,
+            {
+                "label": f"Expense Booked ({convert_currency})",
+                "fieldname": "expense_booked_in_currency",
+                "fieldtype": "Currency",
+                "options": "selected_currency",
+                "width": "170",
+            },
+        )
+        columns.append(
+            {
+                "label": "Selected Currency",
+                "fieldname": "selected_currency",
+                "fieldtype": "Link",
+                "options": "Currency",
+                "width": "120",
+                "hidden": 1,
+            }
+        )
 
     return columns
+
 
 def get_data(filters):
     # Define the DocTypes
@@ -136,7 +142,7 @@ def get_data(filters):
             SalesInvoice.custom_bill_of_landing.as_("bl_number"),
             LandedCostTaxesAndCharges.amount.as_("amount"),
             LandedCostTaxesAndCharges.amount.as_("expense_booked"),
-            LandedCostTaxesAndCharges.description.as_("description")
+            LandedCostTaxesAndCharges.description.as_("description"),
         )
         .where(SalesInvoice.docstatus == 1)
         .where(SalesShipmentCost.docstatus == 1)
@@ -145,7 +151,7 @@ def get_data(filters):
     # Apply filters if provided
     if filters.get("company"):
         query = query.where(SalesShipmentCost.company == filters.get("company"))
-    
+
     if filters.get("sales_invoice"):
         query = query.where(SalesInvoice.name == filters.get("sales_invoice"))
 
@@ -157,13 +163,11 @@ def get_data(filters):
     totals_dict = {}
     grand_totals_dict = {
         "grand_total_expense_booked": 0,
-        "grand_total_amount":  0,
+        "grand_total_amount": 0,
         "grand_total_expense_booked_in_currency": 0,
         "grand_total_amount_in_currency": 0,
-        "currency": ""
+        "currency": "",
     }
-
-
 
     for row in data:
         original_currency = row["currency"]
@@ -171,7 +175,7 @@ def get_data(filters):
         original_amount = row["amount"]
         date = row["posting_date"]
 
-         # Accumulate totals in the dictionary
+        # Accumulate totals in the dictionary
         invoice_number = row["invoice_number"]
         if invoice_number not in totals_dict:
             totals_dict[invoice_number] = {
@@ -189,12 +193,17 @@ def get_data(filters):
 
         # Convert currency if necessary
         if selected_currency:
-
-            row["expense_booked_in_currency"] = convert_currency(original_expense_booked, original_currency, selected_currency, date)
-            row["amount_in_currency"] = convert_currency(original_amount, original_currency, selected_currency, date)
+            row["expense_booked_in_currency"] = convert_currency(
+                original_expense_booked, original_currency, selected_currency, date
+            )
+            row["amount_in_currency"] = convert_currency(
+                original_amount, original_currency, selected_currency, date
+            )
             row["selected_currency"] = selected_currency
-            exchange_rate, conversion_date = get_conversion_rate(original_currency, selected_currency, date)
-            
+            exchange_rate, conversion_date = get_conversion_rate(
+                original_currency, selected_currency, date
+            )
+
             if original_currency != selected_currency and exchange_rate < 1:
                 # Display the rate as USD -> CDF, not the inverse
                 row["exchange_rate"] = 1 / exchange_rate
@@ -208,12 +217,20 @@ def get_data(filters):
             if "total_amount_in_currency" not in totals_dict[invoice_number]:
                 totals_dict[invoice_number]["total_amount_in_currency"] = 0
 
-            totals_dict[invoice_number]["total_expense_booked_in_currency"] += row["expense_booked_in_currency"]
-            totals_dict[invoice_number]["total_amount_in_currency"] += row["amount_in_currency"]
+            totals_dict[invoice_number]["total_expense_booked_in_currency"] += row[
+                "expense_booked_in_currency"
+            ]
+            totals_dict[invoice_number]["total_amount_in_currency"] += row[
+                "amount_in_currency"
+            ]
 
-            grand_totals_dict["grand_total_expense_booked_in_currency"] += row["expense_booked_in_currency"]
-            grand_totals_dict["grand_total_amount_in_currency"] += row["amount_in_currency"]
-        
+            grand_totals_dict["grand_total_expense_booked_in_currency"] += row[
+                "expense_booked_in_currency"
+            ]
+            grand_totals_dict["grand_total_amount_in_currency"] += row[
+                "amount_in_currency"
+            ]
+
         # Add row to final data
         final_data.append(row)
 
@@ -234,8 +251,10 @@ def get_data(filters):
         }
 
         if "total_expense_booked_in_currency" in totals != 0:
-            total_row["expense_booked_in_currency"] = totals["total_expense_booked_in_currency"]
-    
+            total_row["expense_booked_in_currency"] = totals[
+                "total_expense_booked_in_currency"
+            ]
+
         if "total_amount_in_currency" in totals != 0:
             total_row["amount_in_currency"] = totals["total_amount_in_currency"]
 
@@ -253,8 +272,14 @@ def get_data(filters):
         "landed_cost": "",
         "description": "",
         "is_total": True,
-        "expense_booked_in_currency": grand_totals_dict["grand_total_expense_booked_in_currency"] if selected_currency else None,
-        "amount_in_currency": grand_totals_dict["grand_total_amount_in_currency"] if selected_currency else None,
+        "expense_booked_in_currency": grand_totals_dict[
+            "grand_total_expense_booked_in_currency"
+        ]
+        if selected_currency
+        else None,
+        "amount_in_currency": grand_totals_dict["grand_total_amount_in_currency"]
+        if selected_currency
+        else None,
     }
     final_data.append(grand_total_row)
 
@@ -263,26 +288,28 @@ def get_data(filters):
         final_data,
         key=lambda x: (
             1 if x["invoice_number"] == "Total" else 0,
-            x["invoice_number"][8:] if x["invoice_number"].startswith("Total - ") else x["invoice_number"]
-        )
+            x["invoice_number"][8:]
+            if x["invoice_number"].startswith("Total - ")
+            else x["invoice_number"],
+        ),
     )
     return final_data
 
-def get_conversion_rate(from_currency, to_currency, date):
 
+def get_conversion_rate(from_currency, to_currency, date):
     if from_currency == to_currency:
         return 1, None
-    
+
     conversion_rate = frappe.get_all(
         "Currency Exchange",
         filters={
             "from_currency": from_currency,
             "to_currency": to_currency,
-            "date": ["<=", date]
+            "date": ["<=", date],
         },
         fields=["exchange_rate", "date"],
         order_by="date desc",
-        limit=1
+        limit=1,
     )
 
     if conversion_rate:
@@ -294,11 +321,11 @@ def get_conversion_rate(from_currency, to_currency, date):
             filters={
                 "from_currency": to_currency,
                 "to_currency": from_currency,
-                "date": ["<=", date]
+                "date": ["<=", date],
             },
             fields=["exchange_rate", "date"],
             order_by="date desc",
-            limit=1
+            limit=1,
         )
 
         if inverse_conversion_rate:
@@ -310,8 +337,11 @@ def get_conversion_rate(from_currency, to_currency, date):
                     from_currency, to_currency
                 )
             )
-            return 1, None     
+            return 1, None
+
 
 def convert_currency(amount, from_currency, to_currency, date):
-    conversion_rate, conversion_date = get_conversion_rate(from_currency, to_currency, date)
+    conversion_rate, conversion_date = get_conversion_rate(
+        from_currency, to_currency, date
+    )
     return amount * conversion_rate

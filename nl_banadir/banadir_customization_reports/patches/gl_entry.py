@@ -1,5 +1,6 @@
 import frappe
 
+
 def execute():
     frappe.db.sql("""
         UPDATE `tabGL Entry`
@@ -8,4 +9,3 @@ def execute():
         AND company = 'CITYWALK FOOTWEAR PVT LTD'
     """)
     frappe.db.commit()
-

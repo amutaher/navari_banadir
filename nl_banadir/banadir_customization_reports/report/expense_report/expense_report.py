@@ -6,211 +6,243 @@ from frappe import _
 from frappe.utils import flt
 
 from erpnext.accounts.report.financial_statements import (
-	get_columns,
-	get_data,
-	get_filtered_list_for_consolidated_report,
-	get_period_list,
+    get_columns,
+    get_data,
+    get_filtered_list_for_consolidated_report,
+    get_period_list,
 )
 
 
 def execute(filters=None):
-	period_list = get_period_list(
-		filters.from_fiscal_year,
-		filters.to_fiscal_year,
-		filters.period_start_date,
-		filters.period_end_date,
-		filters.filter_based_on,
-		filters.periodicity,
-		company=filters.company,
-	)
+    period_list = get_period_list(
+        filters.from_fiscal_year,
+        filters.to_fiscal_year,
+        filters.period_start_date,
+        filters.period_end_date,
+        filters.filter_based_on,
+        filters.periodicity,
+        company=filters.company,
+    )
 
-	hide_accounts = filters.get("hide_account", [])
-	hide_parent_accounts = filters.get("hide_parent_account", [])
+    hide_accounts = filters.get("hide_account", [])
+    hide_parent_accounts = filters.get("hide_parent_account", [])
 
-	income = get_data(
-		filters.company,
-		"Income",
-		"Credit",
-		period_list,
-		filters=filters,
-		accumulated_values=filters.accumulated_values,
-		ignore_closing_entries=True,
-		ignore_accumulated_values_for_fy=True,
-	)
+    income = get_data(
+        filters.company,
+        "Income",
+        "Credit",
+        period_list,
+        filters=filters,
+        accumulated_values=filters.accumulated_values,
+        ignore_closing_entries=True,
+        ignore_accumulated_values_for_fy=True,
+    )
 
-	expense = get_data(
-		filters.company,
-		"Expense",
-		"Debit",
-		period_list,
-		filters=filters,
-		accumulated_values=filters.accumulated_values,
-		ignore_closing_entries=True,
-		ignore_accumulated_values_for_fy=True,
-	)
+    expense = get_data(
+        filters.company,
+        "Expense",
+        "Debit",
+        period_list,
+        filters=filters,
+        accumulated_values=filters.accumulated_values,
+        ignore_closing_entries=True,
+        ignore_accumulated_values_for_fy=True,
+    )
 
-	if hide_accounts or hide_parent_accounts:
-		income = filter_accounts(income, hide_accounts, hide_parent_accounts)
-		expense = filter_accounts(expense, hide_accounts, hide_parent_accounts)
+    if hide_accounts or hide_parent_accounts:
+        income = filter_accounts(income, hide_accounts, hide_parent_accounts)
+        expense = filter_accounts(expense, hide_accounts, hide_parent_accounts)
 
-	net_profit_loss = get_net_profit_loss(
-		income, expense, period_list, filters.company, filters.presentation_currency
-	)
+    # net_profit_loss = get_net_profit_loss(
+    #     income, expense, period_list, filters.company, filters.presentation_currency
+    # )
 
-	data = []
-	# data.extend(income or [])
-	data.extend(expense or [])
-	# if net_profit_loss:
-		# data.append(net_profit_loss)
+    data = []
+    # data.extend(income or [])
+    data.extend(expense or [])
+    # if net_profit_loss:
+    # data.append(net_profit_loss)
 
-	columns = get_columns(filters.periodicity, period_list, filters.accumulated_values, filters.company)
+    columns = get_columns(
+        filters.periodicity, period_list, filters.accumulated_values, filters.company
+    )
 
-	chart = get_chart_data(filters, columns, income, expense, net_profit_loss)
+    # chart = get_chart_data(filters, columns, income, expense, net_profit_loss)
 
-	currency = filters.presentation_currency or frappe.get_cached_value(
-		"Company", filters.company, "default_currency"
-	)
-	report_summary, primitive_summary = get_report_summary(
-		period_list, filters.periodicity, income, expense, net_profit_loss, currency, filters
-	)
+    # currency = filters.presentation_currency or frappe.get_cached_value(
+    #     "Company", filters.company, "default_currency"
+    # )
+    # report_summary, primitive_summary = get_report_summary(
+    #     period_list,
+    #     filters.periodicity,
+    #     income,
+    #     expense,
+    #     net_profit_loss,
+    #     currency,
+    #     filters,
+    # )
 
-	return columns, data, None, None, None, None
+    return columns, data, None, None, None, None
+
 
 def filter_accounts(data, hide_accounts, hide_parent_accounts):
-	if not data:
-		return data
-	
-	filtered_data = []
-	for row in data:
-		account = row.get("account")
-		parent_account = row.get("parent_account")
+    if not data:
+        return data
 
-		if account and account in hide_accounts:
-			continue
+    filtered_data = []
+    for row in data:
+        account = row.get("account")
+        parent_account = row.get("parent_account")
 
-		if parent_account and parent_account in hide_parent_accounts:
-					continue
-		
-		is_child_of_hidden_parent = False
-		for hidden_parent in hide_parent_accounts:
-			if account and hidden_parent in account:  # Check if parent is part of account hierarchy
-				is_child_of_hidden_parent = True
-				break
+        if account and account in hide_accounts:
+            continue
 
-		if not is_child_of_hidden_parent:
-			filtered_data.append(row)
+        if parent_account and parent_account in hide_parent_accounts:
+            continue
 
-	return filtered_data
+        is_child_of_hidden_parent = False
+        for hidden_parent in hide_parent_accounts:
+            if (
+                account and hidden_parent in account
+            ):  # Check if parent is part of account hierarchy
+                is_child_of_hidden_parent = True
+                break
+
+        if not is_child_of_hidden_parent:
+            filtered_data.append(row)
+
+    return filtered_data
+
 
 def get_report_summary(
-	period_list, periodicity, income, expense, net_profit_loss, currency, filters, consolidated=False
+    period_list,
+    periodicity,
+    income,
+    expense,
+    net_profit_loss,
+    currency,
+    filters,
+    consolidated=False,
 ):
-	net_income, net_expense, net_profit = 0.0, 0.0, 0.0
+    net_income, net_expense, net_profit = 0.0, 0.0, 0.0
 
-	# from consolidated financial statement
-	if filters.get("accumulated_in_group_company"):
-		period_list = get_filtered_list_for_consolidated_report(filters, period_list)
+    # from consolidated financial statement
+    if filters.get("accumulated_in_group_company"):
+        period_list = get_filtered_list_for_consolidated_report(filters, period_list)
 
-	if filters.accumulated_values:
-		# when 'accumulated_values' is enabled, periods have running balance.
-		# so, last period will have the net amount.
-		key = period_list[-1].key
-		if income:
-			net_income = income[-2].get(key)
-		if expense:
-			net_expense = expense[-2].get(key)
-		if net_profit_loss:
-			net_profit = net_profit_loss.get(key)
-	else:
-		for period in period_list:
-			key = period if consolidated else period.key
-			if income:
-				net_income += income[-2].get(key)
-			if expense:
-				net_expense += expense[-2].get(key)
-			if net_profit_loss:
-				net_profit += net_profit_loss.get(key)
+    if filters.accumulated_values:
+        # when 'accumulated_values' is enabled, periods have running balance.
+        # so, last period will have the net amount.
+        key = period_list[-1].key
+        if income:
+            net_income = income[-2].get(key)
+        if expense:
+            net_expense = expense[-2].get(key)
+        if net_profit_loss:
+            net_profit = net_profit_loss.get(key)
+    else:
+        for period in period_list:
+            key = period if consolidated else period.key
+            if income:
+                net_income += income[-2].get(key)
+            if expense:
+                net_expense += expense[-2].get(key)
+            if net_profit_loss:
+                net_profit += net_profit_loss.get(key)
 
-	if len(period_list) == 1 and periodicity == "Yearly":
-		profit_label = _("Profit This Year")
-		income_label = _("Total Income This Year")
-		expense_label = _("Total Expense This Year")
-	else:
-		profit_label = _("Net Profit")
-		income_label = _("Total Income")
-		expense_label = _("Total Expense")
+    if len(period_list) == 1 and periodicity == "Yearly":
+        profit_label = _("Profit This Year")
+        income_label = _("Total Income This Year")
+        expense_label = _("Total Expense This Year")
+    else:
+        profit_label = _("Net Profit")
+        income_label = _("Total Income")
+        expense_label = _("Total Expense")
 
-	return [
-		{"value": net_income, "label": income_label, "datatype": "Currency", "currency": currency},
-		{"type": "separator", "value": "-"},
-		{"value": net_expense, "label": expense_label, "datatype": "Currency", "currency": currency},
-		{"type": "separator", "value": "=", "color": "blue"},
-		{
-			"value": net_profit,
-			"indicator": "Green" if net_profit > 0 else "Red",
-			"label": profit_label,
-			"datatype": "Currency",
-			"currency": currency,
-		},
-	], net_profit
+    return [
+        {
+            "value": net_income,
+            "label": income_label,
+            "datatype": "Currency",
+            "currency": currency,
+        },
+        {"type": "separator", "value": "-"},
+        {
+            "value": net_expense,
+            "label": expense_label,
+            "datatype": "Currency",
+            "currency": currency,
+        },
+        {"type": "separator", "value": "=", "color": "blue"},
+        {
+            "value": net_profit,
+            "indicator": "Green" if net_profit > 0 else "Red",
+            "label": profit_label,
+            "datatype": "Currency",
+            "currency": currency,
+        },
+    ], net_profit
 
 
-def get_net_profit_loss(income, expense, period_list, company, currency=None, consolidated=False):
-	total = 0
-	net_profit_loss = {
-		"account_name": "'" + _("Profit for the year") + "'",
-		"account": "'" + _("Profit for the year") + "'",
-		"warn_if_negative": True,
-		"currency": currency or frappe.get_cached_value("Company", company, "default_currency"),
-	}
+def get_net_profit_loss(
+    income, expense, period_list, company, currency=None, consolidated=False
+):
+    total = 0
+    net_profit_loss = {
+        "account_name": "'" + _("Profit for the year") + "'",
+        "account": "'" + _("Profit for the year") + "'",
+        "warn_if_negative": True,
+        "currency": currency
+        or frappe.get_cached_value("Company", company, "default_currency"),
+    }
 
-	has_value = False
+    has_value = False
 
-	for period in period_list:
-		key = period if consolidated else period.key
-		total_income = flt(income[-2][key], 3) if income else 0
-		total_expense = flt(expense[-2][key], 3) if expense else 0
+    for period in period_list:
+        key = period if consolidated else period.key
+        total_income = flt(income[-2][key], 3) if income else 0
+        total_expense = flt(expense[-2][key], 3) if expense else 0
 
-		net_profit_loss[key] = total_income - total_expense
+        net_profit_loss[key] = total_income - total_expense
 
-		if net_profit_loss[key]:
-			has_value = True
+        if net_profit_loss[key]:
+            has_value = True
 
-		total += flt(net_profit_loss[key])
-		net_profit_loss["total"] = total
+        total += flt(net_profit_loss[key])
+        net_profit_loss["total"] = total
 
-	if has_value:
-		return net_profit_loss
+    if has_value:
+        return net_profit_loss
 
 
 def get_chart_data(filters, columns, income, expense, net_profit_loss):
-	labels = [d.get("label") for d in columns[2:]]
+    labels = [d.get("label") for d in columns[2:]]
 
-	income_data, expense_data, net_profit = [], [], []
+    income_data, expense_data, net_profit = [], [], []
 
-	for p in columns[2:]:
-		if income:
-			income_data.append(income[-2].get(p.get("fieldname")))
-		if expense:
-			expense_data.append(expense[-2].get(p.get("fieldname")))
-		if net_profit_loss:
-			net_profit.append(net_profit_loss.get(p.get("fieldname")))
+    for p in columns[2:]:
+        if income:
+            income_data.append(income[-2].get(p.get("fieldname")))
+        if expense:
+            expense_data.append(expense[-2].get(p.get("fieldname")))
+        if net_profit_loss:
+            net_profit.append(net_profit_loss.get(p.get("fieldname")))
 
-	datasets = []
-	if income_data:
-		datasets.append({"name": _("Income"), "values": income_data})
-	if expense_data:
-		datasets.append({"name": _("Expense"), "values": expense_data})
-	if net_profit:
-		datasets.append({"name": _("Net Profit/Loss"), "values": net_profit})
+    datasets = []
+    if income_data:
+        datasets.append({"name": _("Income"), "values": income_data})
+    if expense_data:
+        datasets.append({"name": _("Expense"), "values": expense_data})
+    if net_profit:
+        datasets.append({"name": _("Net Profit/Loss"), "values": net_profit})
 
-	chart = {"data": {"labels": labels, "datasets": datasets}}
+    chart = {"data": {"labels": labels, "datasets": datasets}}
 
-	if not filters.accumulated_values:
-		chart["type"] = "bar"
-	else:
-		chart["type"] = "line"
+    if not filters.accumulated_values:
+        chart["type"] = "bar"
+    else:
+        chart["type"] = "line"
 
-	chart["fieldtype"] = "Currency"
+    chart["fieldtype"] = "Currency"
 
-	return chart
+    return chart

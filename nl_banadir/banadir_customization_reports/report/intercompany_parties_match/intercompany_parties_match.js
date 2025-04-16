@@ -54,7 +54,7 @@ frappe.query_reports["Intercompany Parties Match"] = {
           frappe.db.get_value(party_type, party, fieldname, function (value) {
             frappe.query_report.set_filter_value(
               "party_name",
-              value[fieldname]
+              value[fieldname],
             );
           });
 

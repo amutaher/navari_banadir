@@ -64,7 +64,6 @@ doc_events = {
         "on_submit": "nl_banadir.banadir_customization_reports.overrides.journal_entry.on_submit",
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company_item_level",
     },
-    
     "Production Plan": {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.production_plan.auto_name",
         "on_submit": "nl_banadir.banadir_customization_reports.controllers.production_plan.sync_sequence",
@@ -80,7 +79,6 @@ doc_events = {
     "Stock Entry": {
         "before_save": "nl_banadir.banadir_customization_reports.controllers.stock_entry.before_save",
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
-
     },
     "Sales Shipment Cost": {
         "before_cancel": "nl_banadir.banadir_customization_reports.controllers.sales_shipment_cost.before_cancel",
@@ -101,11 +99,9 @@ doc_events = {
     "Stock Reconciliation": {
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
     },
-    "Item":{
+    "Item": {
         "validate": "nl_banadir.banadir_customization_reports.controllers.item.validate",
-    }
-    
-  
+    },
 }
 
 # include js, css files in header of desk.html

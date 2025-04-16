@@ -1,5 +1,5 @@
 import frappe
-from frappe import _
+
 
 def sync_shipping_details(doc, method):
     """
@@ -19,7 +19,7 @@ def process_shipping_sync(doc):
     Sync shipping details across all invoices linked by transit_no and update shipping status if needed.
     This runs in the background.
     """
-    
+
     fields_to_sync = [
         "custom_container_no",
         "custom_port_of_loading",
@@ -56,12 +56,14 @@ def process_shipping_sync(doc):
         "Transit Numbers",
         filters={"transit_no": ["in", transit_numbers]},
         fields=["parent", "parenttype"],
-        distinct=True
+        distinct=True,
     )
 
     values_to_update = {field: doc.get(field) for field in fields_to_sync}
 
-    if doc.get("custom_actual_arrival_date") and doc.get("custom_actual_arrival_date") != original_doc.get("custom_actual_arrival_date"):
+    if doc.get("custom_actual_arrival_date") and doc.get(
+        "custom_actual_arrival_date"
+    ) != original_doc.get("custom_actual_arrival_date"):
         values_to_update["custom_shipping_status"] = "Completed"
 
     for inv in related_invoices:
@@ -69,12 +71,11 @@ def process_shipping_sync(doc):
             continue
 
         frappe.db.set_value(
-            inv.parenttype,
-            inv.parent,
-            values_to_update,
-            update_modified=True
+            inv.parenttype, inv.parent, values_to_update, update_modified=True
         )
 
-        frappe.logger().info(f"Updated shipping details in {inv.parenttype} {inv.parent}")
+        frappe.logger().info(
+            f"Updated shipping details in {inv.parenttype} {inv.parent}"
+        )
 
     frappe.db.commit()

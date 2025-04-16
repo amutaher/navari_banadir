@@ -4,7 +4,6 @@
 from typing import TypedDict
 
 import frappe
-import erpnext
 from frappe.query_builder import DocType, Case
 from frappe.utils import getdate
 from erpnext.accounts.report.utils import convert
@@ -349,7 +348,6 @@ class InterCompanyPartiesMatchReport:
 
     def compare_journals_by_amount(self):
         if self.filters.get("from_company") and self.filters.get("to_company"):
-
             from_company_journals = self.get_journals(
                 "from_company", "journal", "total_debit"
             )

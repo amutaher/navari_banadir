@@ -3,7 +3,6 @@
 
 import copy
 import frappe
-from frappe.www.printview import get_letter_head, get_print_style
 from frappe.desk.reportview import get_match_cond
 from frappe.model.document import Document
 from frappe import _
@@ -29,7 +28,6 @@ from erpnext.accounts.report.general_ledger.general_ledger import execute as get
 
 
 class SuppliersProcessStatementOfAccounts(Document):
-
     def validate(self):
         if not self.subject:
             self.subject = "Statement of Accounts for {{ supplier.supplier_name }}"
@@ -197,44 +195,44 @@ def get_ar_filters(doc, entry):
     }
 
 
-def get_html(doc, filters, entry, col, res, ageing):
-    base_template_path = "frappe/www/printview.html"
-    template_path = (
-        "nl_banadir/templates/process_statement_of_accounts_suppliers.html"
-        if doc.report == "General Ledger"
-        else "nl_banadir/templates/process_statement_of_accounts_accounts_payable.html"
-    )
+# def get_html(doc, filters, entry, col, res, ageing):
+#     base_template_path = "frappe/www/printview.html"
+#     template_path = (
+#         "nl_banadir/templates/process_statement_of_accounts_suppliers.html"
+#         if doc.report == "General Ledger"
+#         else "nl_banadir/templates/process_statement_of_accounts_accounts_payable.html"
+#     )
 
-    if doc.letter_head:
-        letter_head = get_letter_head(doc, 0)
+#     if doc.letter_head:
+#         letter_head = get_letter_head(doc, 0)
 
-    html = frappe.render_template(
-        template_path,
-        {
-            "filters": filters,
-            "data": res,
-            "report": {"report_name": doc.report, "columns": col},
-            "ageing": ageing[0] if (doc.include_ageing and ageing) else None,
-            "letter_head": letter_head if doc.letter_head else None,
-            "terms_and_conditions": (
-                frappe.db.get_value(
-                    "Terms and Conditions", doc.terms_and_conditions, "terms"
-                )
-                if doc.terms_and_conditions
-                else None
-            ),
-        },
-    )
+#     html = frappe.render_template(
+#         template_path,
+#         {
+#             "filters": filters,
+#             "data": res,
+#             "report": {"report_name": doc.report, "columns": col},
+#             "ageing": ageing[0] if (doc.include_ageing and ageing) else None,
+#             "letter_head": letter_head if doc.letter_head else None,
+#             "terms_and_conditions": (
+#                 frappe.db.get_value(
+#                     "Terms and Conditions", doc.terms_and_conditions, "terms"
+#                 )
+#                 if doc.terms_and_conditions
+#                 else None
+#             ),
+#         },
+#     )
 
-    html = frappe.render_template(
-        base_template_path,
-        {
-            "body": html,
-            "css": get_print_style(),
-            "title": "Statement For " + entry.supplier,
-        },
-    )
-    return html
+#     html = frappe.render_template(
+#         base_template_path,
+#         {
+#             "body": html,
+#             "css": get_print_style(),
+#             "title": "Statement For " + entry.supplier,
+#         },
+#     )
+#     return html
 
 
 def get_suppliers_based_on_supplier_group(supplier_collection, collection_name):
@@ -348,9 +346,7 @@ def get_supplier_emails(supplier_name, primary_mandatory, billing_and_primary=Tr
 			{mcond}
 		ORDER BY
 			contact.creation desc
-		""".format(
-            mcond=get_match_cond("Contact")
-        ),
+		""".format(mcond=get_match_cond("Contact")),
         supplier_name,
     )
 

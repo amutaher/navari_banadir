@@ -5,13 +5,13 @@
 
 
 from nl_banadir.banadir_customization_reports.report.accounts_receivable_summary_multi_currency.accounts_receivable_summary_multi_currency import (
-	AccountsReceivableSummary,
+    AccountsReceivableSummary,
 )
 
 
 def execute(filters=None):
-	args = {
-		"account_type": "Payable",
-		"naming_by": ["Buying Settings", "supp_master_name"],
-	}
-	return AccountsReceivableSummary(filters).run(args)
+    args = {
+        "account_type": "Payable",
+        "naming_by": ["Buying Settings", "supp_master_name"],
+    }
+    return AccountsReceivableSummary(filters).run(args)
