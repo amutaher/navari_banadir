@@ -13,18 +13,18 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
 class UnitTestCurrencyConversion(UnitTestCase):
-	"""
-	Unit tests for CurrencyConversion.
-	Use this class for testing individual functions and methods.
-	"""
+    """
+    Unit tests for CurrencyConversion.
+    Use this class for testing individual functions and methods.
+    """
 
-	pass
+    pass
 
 
 class IntegrationTestCurrencyConversion(IntegrationTestCase):
-	"""
-	Integration tests for CurrencyConversion.
-	Use this class for testing interactions between multiple components.
-	"""
+    """
+    Integration tests for CurrencyConversion.
+    Use this class for testing interactions between multiple components.
+    """
 
-	pass
+    pass

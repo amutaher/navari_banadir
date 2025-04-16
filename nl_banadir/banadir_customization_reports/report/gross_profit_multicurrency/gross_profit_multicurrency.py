@@ -7,7 +7,7 @@ import frappe
 from frappe import _, qb, scrub
 from frappe.query_builder import Order
 from frappe.utils import cint, flt, formatdate
-from erpnext.accounts.report.utils import convert, get_rate_as_at
+from erpnext.accounts.report.utils import convert
 
 
 from erpnext.controllers.queries import get_match_cond
@@ -1095,7 +1095,7 @@ class GrossProfitGenerator:
                 "qty": row.total_qty,
                 "item_row": None,
                 "is_return": row.is_return,
-                "cost_center": row.cost_center,
+                # "cost_center": row.cost_center,
                 "base_net_amount": frappe.db.get_value(
                     "Sales Invoice", row.parent, "base_net_total"
                 ),
@@ -1139,7 +1139,7 @@ class GrossProfitGenerator:
                 "qty": (flt(product_bundle.qty) * flt(item.qty)),
                 "item_row": None,
                 "is_return": product_bundle.is_return,
-                "cost_center": product_bundle.cost_center,
+                # "cost_center": product_bundle.cost_center,
             }
         )
 

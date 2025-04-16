@@ -24,7 +24,7 @@ frappe.ui.form.on("Process Statement Of Accounts", {
             },
           });
         },
-        __("Custom Download")
+        __("Custom Download"),
       );
       frm.add_custom_button(
         __("Download"),
@@ -34,7 +34,7 @@ frappe.ui.form.on("Process Statement Of Accounts", {
           let url = frappe.urllib.get_full_url(
             "/api/method/nl_banadir.banadir_customization_reports.overrides.process_of_statements.download_statements?" +
               "document_name=" +
-              encodeURIComponent(frm.doc.name)
+              encodeURIComponent(frm.doc.name),
           );
           $.ajax({
             url: url,
@@ -48,7 +48,7 @@ frappe.ui.form.on("Process Statement Of Accounts", {
             },
           });
         },
-        __("Custom Download")
+        __("Custom Download"),
       );
     }
   },

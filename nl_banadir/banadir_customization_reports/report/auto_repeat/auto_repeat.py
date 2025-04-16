@@ -4,7 +4,6 @@
 from typing import TypedDict
 
 import frappe
-from frappe import _
 from frappe.utils import getdate
 from frappe.query_builder import DocType
 
