@@ -89,7 +89,11 @@ def split_sub_assembly(production_plan):
     
     # Update document
     remove_items_and_add_new(plan_doc, 'sub_assembly_items', items_to_split, new_items)
+    reset_indices(plan_doc.po_items)
+    plan_doc.save()
+    plan_doc.reload()
     return plan_doc
+
 
 def split_production_items(production_plan):
     """Split production items (po_items) based on custom_split_no"""
@@ -103,8 +107,19 @@ def split_production_items(production_plan):
         new_items.extend(create_production_split_items(item, split_result))
     
     remove_items_and_add_new(plan_doc, 'po_items', items_to_split, new_items)
+    
+    # Explicitly reset indices to ensure proper numbering
+    reset_indices(plan_doc.po_items)
+    
+    plan_doc.save()
+    plan_doc.reload()
     return plan_doc
 
+def reset_indices(items):
+    """Reset idx values for all items to ensure sequential numbering"""
+    for i, item in enumerate(items, 1):
+        item.idx = i
+        
 def get_initial_seq_id(doctype, fieldname):
     """Get the maximum existing seq_id + 1"""
     existing = frappe.get_all(doctype, fields=[fieldname])
@@ -175,9 +190,6 @@ def remove_items_and_add_new(doc, child_table, items_to_remove, new_items):
     
     for item in new_items:
         doc.append(child_table, item)
-    
-    doc.save()
-    doc.reload()
 
 @frappe.whitelist()
 def split_po_items():
