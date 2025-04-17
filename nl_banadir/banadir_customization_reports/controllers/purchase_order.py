@@ -37,20 +37,27 @@ the specific work order to get the quantity from?"""
 def get_qty_from_first_work_order(work_order):
     """
     Fetch items and quantities from the first Work Order associated with the given Production Plan.
-    Additionally, fetch items from the 'required_materials' child table where 'custom_item_group' is 'UPPER STOCK'.
+    Additionally, fetch items from the 'required_materials' child table where 'item_code' contains 'UPPER'.
     """
 
     work_order = frappe.get_doc("Work Order", work_order)
     rate = get_job_charges_rate(work_order)
+
     required_materials = frappe.get_all(
         "Work Order Item",
-        filters={"parent": work_order.name, "custom_item_group": "UPPER STOCK"},
+        filters=[["parent", "=", work_order.name], ["item_code", "like", "%UPPER%"]],
         fields=["item_code"],
     )
-    response = {"work_order_qty": work_order.qty, "upper_stock_items": [], "rate": rate}
+
+    response = {
+        "work_order_qty": work_order.qty,
+        "upper_stock_items": [],
+        "rate": rate,
+    }
 
     if required_materials:
         response["upper_stock_items"] = required_materials[0]["item_code"]
+
     frappe.response["message"] = response
 
 
