@@ -196,6 +196,7 @@ class ReceivablePayableReport:
             "range5",
             "future_amount",
             "remaining_balance",
+            "total_due",
         ]
 
     def get_voucher_balance(self, ple):
@@ -1291,6 +1292,15 @@ class ReceivablePayableReport:
         self.add_column(_("Outstanding Amount"), fieldname="outstanding")
 
         self.setup_ageing_columns()
+
+        if self.filters.account_type == "Payable":
+            self.add_column(
+                label="Total Amount Due",
+                fieldname="total_due",
+                fieldtype="Currency",
+                options="currency",
+                width=180,
+            )
 
         self.add_column(
             label=_("Currency"),
