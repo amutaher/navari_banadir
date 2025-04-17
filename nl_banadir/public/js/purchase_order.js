@@ -162,9 +162,7 @@ frappe.ui.form.on("Purchase Order", {
     frm.set_query("custom_work_order", "items", (frm, cdt, cdn) => {
       const row = locals[cdt][cdn];
       return {
-        filters: {
-          custom_item_group: "FINISHED GOODS INDIA",
-        },
+        filters: [["production_plan_item", "!=", ""]],
       };
     });
   },

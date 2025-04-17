@@ -299,3 +299,13 @@ def validate_subcontracting_receipts(doc):
                 "At least one Subcontracting Receipt must be created before submitting this Work Order."
             )
         )
+
+
+def update_is_finished(doc):
+    if (
+        doc.production_plan_sub_assembly_item is None
+        and doc.production_plan_item is not None
+    ):
+        return True
+    else:
+        return False

@@ -10,7 +10,7 @@ def validate(doc, method=None):
 def validate_custom_sub_operations(doc):
     for row in doc.custom_sub_operations:
         if row.operations:
-            if row.rate <= 0:
+            if not row.rate:
                 frappe.throw(
                     _("Rate cannot be 0 or less for operation <b>{0}</b>").format(
                         row.operations
