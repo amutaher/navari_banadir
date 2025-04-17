@@ -932,6 +932,12 @@ class ReceivablePayableReport:
                 self.ple.posting_date.lte(self.filters.report_date)
             )
 
+        # Add due date filter if provided
+        if self.filters.get("due_date"):
+            self.qb_selection_filter.append(
+                self.ple.due_date == getdate(self.filters.due_date)
+            )
+
         ple = qb.DocType("Payment Ledger Entry")
         query = (
             qb.from_(ple)
