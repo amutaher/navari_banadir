@@ -14,7 +14,6 @@ def disallow_user_access(user, doctype, docname):
     )
 
     if user_perm:
-        # Delete the existing User Permission(s)
         for perm in user_perm:
             frappe.delete_doc("User Permission", perm.name)
 
@@ -33,5 +32,4 @@ def custom_has_permission(doc, ptype="read", user=None):
     if ptype == "read" and doc.name in restricted_invoices:
         return False
 
-    # Default behavior
     return True
