@@ -61,6 +61,11 @@ frappe.query_reports["Accounts Payable MultiCurrency"] = {
       default: "Due Date",
     },
     {
+      fieldname: "due_date",
+      label: __("Due Date"),
+      fieldtype: "Date",
+    },
+    {
       fieldname: "range1",
       label: __("Ageing Range 1"),
       fieldtype: "Int",
@@ -103,7 +108,7 @@ frappe.query_reports["Accounts Payable MultiCurrency"] = {
         frappe.query_report.set_filter_value("party", "");
         frappe.query_report.toggle_filter_display(
           "supplier_group",
-          frappe.query_report.get_filter_value("party_type") !== "Supplier"
+          frappe.query_report.get_filter_value("party_type") !== "Supplier",
         );
       },
     },
@@ -179,12 +184,19 @@ frappe.query_reports["Accounts Payable MultiCurrency"] = {
   },
 
   onload: function (report) {
-    report.page.add_inner_button(__("Accounts Payable Summary MultiCurrency"), function () {
-      var filters = report.get_values();
-      frappe.set_route("query-report", "Accounts Payable Summary MultiCurrency", {
-        company: filters.company,
-      });
-    });
+    report.page.add_inner_button(
+      __("Accounts Payable Summary MultiCurrency"),
+      function () {
+        var filters = report.get_values();
+        frappe.set_route(
+          "query-report",
+          "Accounts Payable Summary MultiCurrency",
+          {
+            company: filters.company,
+          },
+        );
+      },
+    );
   },
 };
 
