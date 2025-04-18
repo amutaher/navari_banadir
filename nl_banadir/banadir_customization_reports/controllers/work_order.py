@@ -220,15 +220,27 @@ def validate_operations_seq(doc, method=None):
                     )
 
 
-def is_finished_good_work_order(doc):
+def is_finished_work_order(doc):
     if (
         doc.production_plan_sub_assembly_item is None
         and doc.production_plan_item is not None
     ):
+        return True
+    else:
+        return False
+
+
+def is_finished_good_work_order(doc):
+    if is_finished_work_order(doc):
         is_insole_complete(doc.custom_seq_id)
         validate_subcontracting_receipts(doc)
     else:
-        return False
+        False
+
+
+def is_insole_work_order(doc):
+    if not is_finished_work_order(doc):
+        is_insole_complete(doc.custom_seq_id)
 
 
 def is_insole_complete(seq_id):
@@ -261,7 +273,7 @@ def validate_insole_complete(doc):
     for item in doc.items:
         if item.custom_work_order:
             work_order = frappe.get_doc("Work Order", item.custom_work_order)
-            is_finished_good_work_order(work_order)
+            is_insole_complete(work_order.custom_seq_id)
 
 
 def validate_subcontracting_receipts(doc):
@@ -289,7 +301,7 @@ def validate_subcontracting_receipts(doc):
         "Subcontracting Receipt Item",
         filters={
             "subcontracting_order": ["in", subcontracting_order_names],
-            "docstatus": 1,
+            # "docstatus": 1,
         },
         limit=1,
     )
