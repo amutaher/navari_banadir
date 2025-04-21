@@ -143,6 +143,10 @@ def on_update(doc, method=None):
 
         # Only consider operations with status "Completed" and invoice_created flag is 0
         if operation_doc.status == "Completed" and operation_doc.invoice_created == 0:
+            if operation_doc.qty_issued <= 0.0:
+                frappe.throw(
+                    f"Issued quantity for operation '{operation_doc.operations}' cannot be 0 or less."
+                )
             create_purchase_invoice(
                 doc=doc,
                 operation=operation_doc,
@@ -283,7 +287,7 @@ def validate_subcontracting_receipts(doc):
         fields=["parent"],
     )
     if not po_items:
-        frappe.throw(_("No Purchase Order Items found linked to this Work Order."))
+        frappe.throw(_("No Purchase Order found linked to this Work Order."))
 
     purchase_order_names = list(set([item.parent for item in po_items]))
 
