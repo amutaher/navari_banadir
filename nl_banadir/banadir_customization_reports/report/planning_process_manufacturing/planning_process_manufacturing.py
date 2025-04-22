@@ -488,7 +488,7 @@ def update_stock_details(record):
             b_qty_issued += item.qty
         if item.is_scrap_item == 1 and item.custom_odd_pairs == 1:
             odd_qty += item.qty or 0
-
+    odd_qty = odd_qty / 2.0 if odd_qty > 0.0 else 0.0
     record.update(
         {
             "stock_entry": stock_entry,
@@ -497,6 +497,7 @@ def update_stock_details(record):
             "odd_qty": odd_qty,
             "b_qty_issued": b_qty_issued,
             "balance_to_issue": qty_issued_machine
+            - odd_qty
             - (is_finished_item_qty + rejected_qty_issued + b_qty_issued),
         }
     )
