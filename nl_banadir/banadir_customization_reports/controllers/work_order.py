@@ -54,6 +54,8 @@ def on_submit(doc, method=None):
             operation.status == "In Progress" or operation.status == "Completed"
         ) and operation.supplier is None:
             frappe.throw("Kindly enter the supplier in Sub-contractor table")
+        if operation.status == "Completed":
+            frappe.throw("You only complete status after submitting the document.")
 
 
 def generate_invoice_number(item_code, company_abbr):
