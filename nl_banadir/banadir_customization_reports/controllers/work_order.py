@@ -54,6 +54,10 @@ def on_submit(doc, method=None):
             operation.status == "In Progress" or operation.status == "Completed"
         ) and operation.supplier is None:
             frappe.throw("Kindly enter the supplier in Sub-contractor table")
+        if operation.status == "Completed":
+            frappe.throw(
+                "You only complete status of an operation after submitting the document."
+            )
 
 
 def generate_invoice_number(item_code, company_abbr):
@@ -147,6 +151,12 @@ def on_update(doc, method=None):
                 frappe.throw(
                     f"Issued quantity for operation '{operation_doc.operations}' cannot be 0 or less."
                 )
+            if operation_doc.qty_issued > operation_doc.completed_qty:
+                frappe.throw(
+                    f"Issued quantity ({operation_doc.qty_issued}) for operation '{operation_doc.operations}' "
+                    f"cannot exceed the completed quantity ({operation_doc.completed_qty})."
+                )
+
             create_purchase_invoice(
                 doc=doc,
                 operation=operation_doc,
