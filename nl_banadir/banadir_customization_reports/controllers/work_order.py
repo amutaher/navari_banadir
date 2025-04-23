@@ -194,6 +194,12 @@ def validate_operations(doc):
             operation_doc.status == "In Progress" or operation_doc.status == "Completed"
         ) and operation_doc.supplier is None:
             frappe.throw("Kindly enter the supplier in the Sub-contractor table.")
+        if operation_doc.status == "Completed" and (
+            operation_doc.in_progress_date is None
+        ):
+            frappe.throw(
+                "You cannot complete an operation without having the <b>In Progress Date</b>."
+            )
 
         if operation_doc.status == "Completed" and (
             operation_doc.in_progress_date > operation_doc.completed_date
