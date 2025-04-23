@@ -17,7 +17,7 @@ frappe.query_reports["Gross Profit MultiCurrency"] = {
       fieldtype: "Date",
       default: erpnext.utils.get_fiscal_year(
         frappe.datetime.get_today(),
-        true
+        true,
       )[1],
       reqd: 1,
     },
@@ -27,7 +27,7 @@ frappe.query_reports["Gross Profit MultiCurrency"] = {
       fieldtype: "Date",
       default: erpnext.utils.get_fiscal_year(
         frappe.datetime.get_today(),
-        true
+        true,
       )[2],
       reqd: 1,
     },

@@ -2,8 +2,9 @@ from datetime import datetime
 from frappe.model.naming import make_autoname
 import frappe
 
+
 def auto_name(doc, method=None):
-    if doc.company=="Banadir Steel LTD":
+    if doc.company == "Banadir Steel LTD":
         if doc.custom_invoice_no:
             doc.name = doc.custom_invoice_no
             return
@@ -15,4 +16,3 @@ def auto_name(doc, method=None):
 
         base_name = make_autoname(f"{company_abbr}-.####")
         doc.name = f"{base_name}-{current_year}"
-    

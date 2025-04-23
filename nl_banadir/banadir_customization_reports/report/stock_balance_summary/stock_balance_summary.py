@@ -83,7 +83,6 @@ class StockBalanceReport:
             if self.data:
                 self.get_warehouse_totals(data=self.data)
 
-
         if self.filters.get("eliminate_zero_values"):
             updated_data = []
             for entry in self.data:

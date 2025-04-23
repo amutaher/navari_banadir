@@ -3,67 +3,266 @@
 
 import frappe
 
-'''Since there is a need to have finished goods and insole on the same line, they must have a corelation
+"""Since there is a need to have finished goods and insole on the same line, they must have a corelation
 Hence the report cannot work if the corelation doesn't exit.
 The remaining solution will be to to bypass creation of work order and create our own with the sequence so that they can map.
-'''
+"""
+
+
 def execute(filters=None):
     columns = get_columns(filters)
     data = get_data(filters)
     return columns, data
 
+
 def get_columns(filters):
     return [
-        {"label": "Sales Order No", "fieldname": "sales_order_no", "fieldtype": "Link", "options": "Sales Order", "width": 150},
-        {"label": "Production Plan No", "fieldname": "production_plan_no", "fieldtype": "Link", "options": "Production Plan", "width": 150},
-                {"label": "PP Status", "fieldname": "status", "fieldtype": "Data", "width": 100},
-
-        {"label": "Finished Goods Work Order No", "fieldname": "finished_goods_work_order_no", "fieldtype": "Link", "options": "Work Order", "width": 200},
-                {"label": "FG Status", "fieldname": "fg_status", "fieldtype": "Data", "width": 100},
-
-        {"label": "Insole Work Order", "fieldname": "insole_work_order", "fieldtype": "Link", "options": "Work Order", "width": 150},
-                {"label": "Insole Status", "fieldname": "i_status", "fieldtype": "Data", "width": 100},
-
-        {"label": "Sequence No (Finished Goods)", "fieldname": "sequence_no", "fieldtype": "Data", "width": 150},  # Added column for sequence number
-        {"label": "Item Name (Finished Goods)", "fieldname": "finished_goods_item", "fieldtype": "Link","options":"Item", "width": 200},
-        {"label": "Item Name (Insole)", "fieldname": "insole_item","fieldtype": "Link","options":"Item", "width": 200},
-        {"label": "Item Name (Upper)", "fieldname": "upper_item", "fieldtype": "Link","options":"Item", "width": 200},
-        {"label": "Order/Pairs", "fieldname": "order_pairs", "fieldtype": int_or_float(filters),"precision":1, "width": 100},
-        {"label": "Date of Issue(In Progress)", "fieldname": "in_progress_date", "fieldtype": "Date", "width": 120},
-        {"label": "Qty Issued", "fieldname": "qty_issued", "fieldtype": "float", "width": 120},
-
-        {"label": "Date of Cutting", "fieldname": "date_of_cutting", "fieldtype": "Date", "width": 120},
-        {"label": "Cutting Pairs", "fieldname": "cutting_pairs", "fieldtype": int_or_float(filters), "width": 120},
-        {"label": "Cutting Contractor", "fieldname": "cutting_contractor", "fieldtype": "Link", "options": "Supplier", "width": 150},
-        {"label": "Balance to Cut", "fieldname": "balance_to_cut", "fieldtype": int_or_float(filters), "width": 120},
-        {"label": "Date of Printing & Embossing", "fieldname": "date_of_printing_embossing", "fieldtype": "Date", "width": 150},
-        {"label": "Qty Issued(Printing)", "fieldname": "qty_issued_printing", "fieldtype": int_or_float(filters), "width": 120},
-        {"label": "Printed & Embossed Pairs", "fieldname": "printed_embossed_pairs", "fieldtype": int_or_float(filters), "width": 150},
-        {"label": "Printing/Embossing Contractor", "fieldname": "printing_embossing_contractor", "fieldtype": "Link", "options": "Supplier", "width": 200},
-        {"label": "Balance to Print/Emboss", "fieldname": "balance_to_print_emboss", "fieldtype": int_or_float(filters), "width": 150},
-        {"label": "Insole Stock", "fieldname": "insole_stock_qty", "fieldtype": int_or_float(filters), "width": 120},
-        {"label": "Issued Date to Subcontractor", "fieldname": "issued_date", "fieldtype": "Date", "width": 150},
-        {"label": "Subcontractor Name", "fieldname": "subcontractor_name_po", "fieldtype": "Link", "options": "Supplier", "width": 150},
-        {"label": "Quantity Issued", "fieldname": "quantity_issued", "fieldtype": int_or_float(filters), "width": 120},
-        {"label": "Received Quantity", "fieldname": "received_quantity", "fieldtype": int_or_float(filters), "width": 120},
-        {"label": "Balance Quantity", "fieldname": "balance_quantity", "fieldtype": int_or_float(filters), "width": 120},
-        {"label": "Upper Stock", "fieldname": "upper_stock", "fieldtype": int_or_float(filters),  "width": 120},
-        {"label":"Qty Issued(Machine)", "fieldname":"qty_issued_machine", "fieldtype":int_or_float(filters), "width":120},
-        {"label":"Fresh Qty", "fieldname":"fresh_qty_issued", "fieldtype":int_or_float(filters), "width":120},
-                {"label":"B Qty", "fieldname":"b_qty_issued", "fieldtype":int_or_float(filters), "width":120},
-
-        {"label":"Rejected Qty", "fieldname":"rejected_qty_issued", "fieldtype":int_or_float(filters), "width":120},
-        {"label":"Odd Qty", "fieldname":"odd_qty", "fieldtype":int_or_float(filters), "width":120},
-
-        {"label":"Balance(In Machine)", "fieldname":"balance_to_issue", "fieldtype":int_or_float(filters), "width":120},
-                {"label":"Stock Entry", "fieldname":"stock_entry", "fieldtype":"Link","options":"Stock Entry", "width":120},
+        {
+            "label": "Sales Order No",
+            "fieldname": "sales_order_no",
+            "fieldtype": "Link",
+            "options": "Sales Order",
+            "width": 150,
+        },
+        {
+            "label": "Production Plan No",
+            "fieldname": "production_plan_no",
+            "fieldtype": "Link",
+            "options": "Production Plan",
+            "width": 150,
+        },
+        {
+            "label": "PP Status",
+            "fieldname": "status",
+            "fieldtype": "Data",
+            "width": 100,
+        },
+        {
+            "label": "Finished Goods Work Order No",
+            "fieldname": "finished_goods_work_order_no",
+            "fieldtype": "Link",
+            "options": "Work Order",
+            "width": 200,
+        },
+        {
+            "label": "FG Status",
+            "fieldname": "fg_status",
+            "fieldtype": "Data",
+            "width": 100,
+        },
+        {
+            "label": "Insole Work Order",
+            "fieldname": "insole_work_order",
+            "fieldtype": "Link",
+            "options": "Work Order",
+            "width": 150,
+        },
+        {
+            "label": "Insole Status",
+            "fieldname": "i_status",
+            "fieldtype": "Data",
+            "width": 100,
+        },
+        {
+            "label": "Sequence No (Finished Goods)",
+            "fieldname": "sequence_no",
+            "fieldtype": "Data",
+            "width": 150,
+        },  # Added column for sequence number
+        {
+            "label": "Item Name (Finished Goods)",
+            "fieldname": "finished_goods_item",
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 200,
+        },
+        {
+            "label": "Item Name (Insole)",
+            "fieldname": "insole_item",
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 200,
+        },
+        {
+            "label": "Item Name (Upper)",
+            "fieldname": "upper_item",
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 200,
+        },
+        {
+            "label": "Order/Pairs",
+            "fieldname": "order_pairs",
+            "fieldtype": int_or_float(filters),
+            "precision": 1,
+            "width": 100,
+        },
+        {
+            "label": "Date of Issue(In Progress)",
+            "fieldname": "in_progress_date",
+            "fieldtype": "Date",
+            "width": 120,
+        },
+        {
+            "label": "Qty Issued",
+            "fieldname": "qty_issued",
+            "fieldtype": "float",
+            "width": 120,
+        },
+        {
+            "label": "Date of Cutting",
+            "fieldname": "date_of_cutting",
+            "fieldtype": "Date",
+            "width": 120,
+        },
+        {
+            "label": "Cutting Pairs",
+            "fieldname": "cutting_pairs",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Cutting Contractor",
+            "fieldname": "cutting_contractor",
+            "fieldtype": "Link",
+            "options": "Supplier",
+            "width": 150,
+        },
+        {
+            "label": "Balance to Cut",
+            "fieldname": "balance_to_cut",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Date of Printing & Embossing",
+            "fieldname": "date_of_printing_embossing",
+            "fieldtype": "Date",
+            "width": 150,
+        },
+        {
+            "label": "Qty Issued(Printing)",
+            "fieldname": "qty_issued_printing",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Printed & Embossed Pairs",
+            "fieldname": "printed_embossed_pairs",
+            "fieldtype": int_or_float(filters),
+            "width": 150,
+        },
+        {
+            "label": "Printing/Embossing Contractor",
+            "fieldname": "printing_embossing_contractor",
+            "fieldtype": "Link",
+            "options": "Supplier",
+            "width": 200,
+        },
+        {
+            "label": "Balance to Print/Emboss",
+            "fieldname": "balance_to_print_emboss",
+            "fieldtype": int_or_float(filters),
+            "width": 150,
+        },
+        {
+            "label": "Insole Stock",
+            "fieldname": "insole_stock_qty",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Issued Date to Subcontractor",
+            "fieldname": "issued_date",
+            "fieldtype": "Date",
+            "width": 150,
+        },
+        {
+            "label": "Subcontractor Name",
+            "fieldname": "subcontractor_name_po",
+            "fieldtype": "Link",
+            "options": "Supplier",
+            "width": 150,
+        },
+        {
+            "label": "Quantity Issued",
+            "fieldname": "quantity_issued",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Received Quantity",
+            "fieldname": "received_quantity",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Balance Quantity",
+            "fieldname": "balance_quantity",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Upper Stock",
+            "fieldname": "upper_stock",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Qty Issued(Machine)",
+            "fieldname": "qty_issued_machine",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Fresh Qty",
+            "fieldname": "fresh_qty_issued",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "B Qty",
+            "fieldname": "b_qty_issued",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Rejected Qty",
+            "fieldname": "rejected_qty_issued",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Odd Qty",
+            "fieldname": "odd_qty",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Balance(In Machine)",
+            "fieldname": "balance_to_issue",
+            "fieldtype": int_or_float(filters),
+            "width": 120,
+        },
+        {
+            "label": "Stock Entry",
+            "fieldname": "stock_entry",
+            "fieldtype": "Link",
+            "options": "Stock Entry",
+            "width": 120,
+        },
     ]
 
+
 def int_or_float(filters):
-    return "Int" if filters.remove_precision==1 else "Float"
+    return "Int" if filters.remove_precision == 1 else "Float"
+
 
 def get_data(filters):
-    conditions = ["fg_work_order.status != 'Cancelled'", "insole_work_order.status != 'Cancelled'"]
+    conditions = [
+        "fg_work_order.status != 'Cancelled'",
+        "insole_work_order.status != 'Cancelled'",
+    ]
 
     if filters.get("company"):
         conditions.append(f"pp.company = '{filters['company']}'")
@@ -72,7 +271,9 @@ def get_data(filters):
     if filters.get("sales_order"):
         conditions.append(f"ppso.sales_order = '{filters['sales_order']}'")
     if filters.get("from_date") and filters.get("to_date"):
-        conditions.append(f"pp.transaction_date BETWEEN '{filters['from_date']}' AND '{filters['to_date']}'")
+        conditions.append(
+            f"pp.transaction_date BETWEEN '{filters['from_date']}' AND '{filters['to_date']}'"
+        )
     if filters.get("status"):
         conditions.append(f"pp.status = '{filters['status']}'")
     condition_query = " AND ".join(conditions) if conditions else "1=1"
@@ -139,12 +340,13 @@ def get_data(filters):
         WHERE
             {condition_query}
     """
-    result= frappe.db.sql(query, as_dict=True)
+    result = frappe.db.sql(query, as_dict=True)
     main_data = [add_insole_stock_data(record) for record in result]
     [update_insole_stock_qty(record) for record in main_data]
     [update_stock_details(record) for record in main_data]
-    
+
     return main_data
+
 
 def add_insole_stock_data(record):
     """
@@ -202,7 +404,7 @@ WHERE
         received_qty = receipt[0].received_quantity if receipt else 0
         balance_quantity = insole_data["issued_qty"] - received_qty
         qty_issued_machine = record.get("qty_issued_machine") or 0
-        upper_stock = received_qty -  qty_issued_machine
+        upper_stock = received_qty - qty_issued_machine
         record.update(
             {
                 "quantity_issued": insole_data["issued_qty"],
@@ -224,50 +426,59 @@ WHERE
                 "issued_date": None,
             }
         )
-  
-    record.update({
-        "upper_item": update_upper_stock_item(finished_goods_work_order_no),
-    })
+
+    record.update(
+        {
+            "upper_item": update_upper_stock_item(finished_goods_work_order_no),
+        }
+    )
     return record
 
+
 def update_upper_stock_item(finished_goods_work_order_no):
-    work_order=frappe.get_doc("Work Order",finished_goods_work_order_no)
+    work_order = frappe.get_doc("Work Order", finished_goods_work_order_no)
     required_items = work_order.get("required_items")
     for item in required_items:
         item_doc = frappe.get_doc("Item", item.item_code)
-        
+
         if item_doc.item_group == "UPPER STOCK":
             return item.item_code
-    
-    
+
+
 def update_insole_stock_qty(record):
     printed_embossed_pairs = record.get("printed_embossed_pairs") or 0
     quantity_issued = record.get("quantity_issued") or 0
 
-    if isinstance(printed_embossed_pairs, (int, float)) and isinstance(quantity_issued, (int, float)):
+    if isinstance(printed_embossed_pairs, (int, float)) and isinstance(
+        quantity_issued, (int, float)
+    ):
         record["insole_stock_qty"] = printed_embossed_pairs - quantity_issued
     else:
-        raise ValueError("Fields 'printed_embossed_pairs' and 'quantity_issued' must be numeric.")
-    
+        raise ValueError(
+            "Fields 'printed_embossed_pairs' and 'quantity_issued' must be numeric."
+        )
+
 
 def update_stock_details(record):
     finished_goods_work_order = record.get("finished_goods_work_order_no")
-    fresh_qty_issued = record.get("fresh_qty_issued") or 0
+    # fresh_qty_issued = record.get("fresh_qty_issued") or 0
     qty_issued_machine = record.get("qty_issued_machine") or 0
-    stock_entry = frappe.db.get_value("Stock Entry", {"work_order": finished_goods_work_order, "docstatus": 1}, "name")
-    
+    stock_entry = frappe.db.get_value(
+        "Stock Entry", {"work_order": finished_goods_work_order, "docstatus": 1}, "name"
+    )
+
     if not stock_entry:
         return record
-    
+
     stock_entry_doc = frappe.get_doc("Stock Entry", stock_entry)
     stock_entry_items = stock_entry_doc.get("items")
-    
+
     # Initialize variables to avoid UnboundLocalError
     rejected_qty_issued = 0
     odd_qty = 0
     is_finished_item_qty = 0
     b_qty_issued = 0
-    
+
     for item in stock_entry_items:
         if item.item_group == "Rejection Items India":
             rejected_qty_issued += item.qty or 0
@@ -277,21 +488,26 @@ def update_stock_details(record):
             b_qty_issued += item.qty
         if item.is_scrap_item == 1 and item.custom_odd_pairs == 1:
             odd_qty += item.qty or 0
-    
-    record.update({
-        "stock_entry": stock_entry,
-        "rejected_qty_issued": rejected_qty_issued,
-        "fresh_qty_issued":is_finished_item_qty,
-        "odd_qty": odd_qty,
-        "b_qty_issued": b_qty_issued,
-        "balance_to_issue": qty_issued_machine - (is_finished_item_qty + rejected_qty_issued+b_qty_issued),
-    })
+    odd_qty = odd_qty / 2.0 if odd_qty > 0.0 else 0.0
+    record.update(
+        {
+            "stock_entry": stock_entry,
+            "rejected_qty_issued": rejected_qty_issued,
+            "fresh_qty_issued": is_finished_item_qty,
+            "odd_qty": odd_qty,
+            "b_qty_issued": b_qty_issued,
+            "balance_to_issue": qty_issued_machine
+            - odd_qty
+            - (is_finished_item_qty + rejected_qty_issued + b_qty_issued),
+        }
+    )
     return record
+
 
 def format_with_thousand_separator(value):
     if isinstance(value, (int, float)):
         if value == int(value):
-            return "{:,.0f}".format(value)  
+            return "{:,.0f}".format(value)
         else:
             return "{:,.2f}".format(value)
     return value

@@ -14,594 +14,765 @@ Filters = frappe._dict
 
 
 def execute(filters: Filters = None) -> tuple:
-	to_date = filters["to_date"]
-	filters.ranges = [num.strip() for num in filters.range.split(",") if num.strip().isdigit()]
-	columns = get_columns(filters)
+    to_date = filters["to_date"]
+    filters.ranges = [
+        num.strip() for num in filters.range.split(",") if num.strip().isdigit()
+    ]
+    columns = get_columns(filters)
 
-	item_details = FIFOSlots(filters).generate()
-	# print(item_details)
-	data = format_report_data(filters, item_details, to_date)
+    item_details = FIFOSlots(filters).generate()
+    # print(item_details)
+    data = format_report_data(filters, item_details, to_date)
 
-	chart_data = get_chart_data(data, filters)
+    chart_data = get_chart_data(data, filters)
 
-	return columns, data, None, chart_data
-
-
-def format_report_data(filters: Filters, item_details: dict, to_date: str) -> list[dict]:
-	"Returns ordered, formatted data with ranges based on fifo_queue or outgoing_queue."
-	_func = itemgetter(1)
-	data = []
+    return columns, data, None, chart_data
 
 
-	precision = cint(frappe.db.get_single_value("System Settings", "float_precision", cache=True))
+def format_report_data(
+    filters: Filters, item_details: dict, to_date: str
+) -> list[dict]:
+    "Returns ordered, formatted data with ranges based on fifo_queue or outgoing_queue."
+    _func = itemgetter(1)
+    data = []
 
-	for _item, item_dict in item_details.items():
-		if not flt(item_dict.get("total_qty"), precision) and not filters.get("period_for_qty_sold"):
-			continue
+    precision = cint(
+        frappe.db.get_single_value("System Settings", "float_precision", cache=True)
+    )
 
-		earliest_age, latest_age = 0, 0
-		details = item_dict["details"]
+    for _item, item_dict in item_details.items():
+        if not flt(item_dict.get("total_qty"), precision) and not filters.get(
+            "period_for_qty_sold"
+        ):
+            continue
 
-		if filters.get("period_for_qty_sold"):
-			queue = sorted(
-				[entry for entry in item_dict["outgoing_queue"] if entry.get("outgoing_date")],
-				key=lambda x: x["outgoing_date"]
-			)			
-			date_field = "outgoing_date"
-			qty_field = "quantity"
-			total_qty = sum(entry[qty_field] for entry in queue)
-		else:
-			queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
-			date_field = 1  # Index for posting_date in fifo_queue
-			qty_field = 0  # Index for qty in fifo_queue
-			total_qty = item_dict.get("total_qty")
+        earliest_age, latest_age = 0, 0
+        details = item_dict["details"]
 
-		# fifo_queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
+        if filters.get("period_for_qty_sold"):
+            queue = sorted(
+                [
+                    entry
+                    for entry in item_dict["outgoing_queue"]
+                    if entry.get("outgoing_date")
+                ],
+                key=lambda x: x["outgoing_date"],
+            )
+            date_field = "outgoing_date"
+            qty_field = "quantity"
+            # total_qty = sum(entry[qty_field] for entry in queue)
+        else:
+            queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
+            date_field = 1  # Index for posting_date in fifo_queue
+            qty_field = 0  # Index for qty in fifo_queue
+            # total_qty = item_dict.get("total_qty")
 
-		if not queue:
-			continue
+        # fifo_queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
 
-		average_age = get_average_age(queue, to_date, date_field, qty_field, filters)
-		earliest_age = get_earliest_age(queue, date_field, filters)
-		latest_age = get_latest_age(queue, date_field, filters)
-		range_values = get_range_age(filters, queue, to_date, item_dict, date_field, qty_field)
+        if not queue:
+            continue
 
-		row = [details.name, details.item_name, details.description, details.item_group, details.brand]
+        average_age = get_average_age(queue, to_date, date_field, qty_field, filters)
+        earliest_age = get_earliest_age(queue, date_field, filters)
+        latest_age = get_latest_age(queue, date_field, filters)
+        range_values = get_range_age(
+            filters, queue, to_date, item_dict, date_field, qty_field
+        )
 
-		if filters.get("show_warehouse_wise_stock"):
-			row.append(details.warehouse)
+        row = [
+            details.name,
+            details.item_name,
+            details.description,
+            details.item_group,
+            details.brand,
+        ]
 
-		row.extend(
-			[
-				flt(item_dict.get("total_qty"), precision),
-				average_age,
-				*range_values,
-				earliest_age,
-				latest_age,
-				details.stock_uom,
-			]
-		)
+        if filters.get("show_warehouse_wise_stock"):
+            row.append(details.warehouse)
 
+        row.extend(
+            [
+                flt(item_dict.get("total_qty"), precision),
+                average_age,
+                *range_values,
+                earliest_age,
+                latest_age,
+                details.stock_uom,
+            ]
+        )
 
-		data.append(row)
+        data.append(row)
 
-	# Apply UOM conversion before removing precision (if applicable)
-	if filters.get("alternative_uom"):
-		data = convert_alternative_uom(data=data, filters=filters)
+    # Apply UOM conversion before removing precision (if applicable)
+    if filters.get("alternative_uom"):
+        data = convert_alternative_uom(data=data, filters=filters)
 
-
-	return data
-
-
-def get_average_age(queue: list, to_date: str, date_field: str | int, qty_field: str | int, filters: Filters) -> float:
-	age_qty = total_qty = 0.0
-	for batch in queue:
-		if filters.get("period_for_qty_sold"):
-			batch_age = date_diff(batch["outgoing_date"], batch["incoming_date"])  # Consumption period
-		else:
-			batch_age = date_diff(to_date, batch[date_field]) # Age of remaining stock
-
-		qty = batch[qty_field]
-		if isinstance(qty, (int, float)):
-			age_qty += batch_age * qty
-			total_qty += qty
-		else:
-			age_qty += batch_age * 1
-			total_qty += 1
-
-	return flt(age_qty / total_qty, 2) if total_qty else 0.0
+    return data
 
 
-def get_range_age(filters: Filters, queue: list, to_date: str, item_dict: dict, date_field: str | int, qty_field: str | int) -> list:
-	precision = cint(frappe.db.get_single_value("System Settings", "float_precision", cache=True))
-	range_values = [0.0] * (len(filters.ranges) + 1)
+def get_average_age(
+    queue: list,
+    to_date: str,
+    date_field: str | int,
+    qty_field: str | int,
+    filters: Filters,
+) -> float:
+    age_qty = total_qty = 0.0
+    for batch in queue:
+        if filters.get("period_for_qty_sold"):
+            batch_age = date_diff(
+                batch["outgoing_date"], batch["incoming_date"]
+            )  # Consumption period
+        else:
+            batch_age = date_diff(to_date, batch[date_field])  # Age of remaining stock
 
-	for item in queue:
-		if filters.get("period_for_qty_sold"):
-			age = flt(date_diff(item["outgoing_date"], item["incoming_date"]))  # Consumption period
-		else:
-			age = flt(date_diff(to_date, item[date_field]))  # Age of remaining stock
-	
-		qty = flt(item[qty_field]) if not item_dict["has_serial_no"] else 1.0
+        qty = batch[qty_field]
+        if isinstance(qty, (int, float)):
+            age_qty += batch_age * qty
+            total_qty += qty
+        else:
+            age_qty += batch_age * 1
+            total_qty += 1
 
-		for i, age_limit in enumerate(filters.ranges):
-			if age <= flt(age_limit):
-				range_values[i] = flt(range_values[i] + qty, precision)
-				break
-		else:
-			range_values[-1] = flt(range_values[-1] + qty, precision)
+    return flt(age_qty / total_qty, 2) if total_qty else 0.0
 
-	return range_values
+
+def get_range_age(
+    filters: Filters,
+    queue: list,
+    to_date: str,
+    item_dict: dict,
+    date_field: str | int,
+    qty_field: str | int,
+) -> list:
+    precision = cint(
+        frappe.db.get_single_value("System Settings", "float_precision", cache=True)
+    )
+    range_values = [0.0] * (len(filters.ranges) + 1)
+
+    for item in queue:
+        if filters.get("period_for_qty_sold"):
+            age = flt(
+                date_diff(item["outgoing_date"], item["incoming_date"])
+            )  # Consumption period
+        else:
+            age = flt(date_diff(to_date, item[date_field]))  # Age of remaining stock
+
+        qty = flt(item[qty_field]) if not item_dict["has_serial_no"] else 1.0
+
+        for i, age_limit in enumerate(filters.ranges):
+            if age <= flt(age_limit):
+                range_values[i] = flt(range_values[i] + qty, precision)
+                break
+        else:
+            range_values[-1] = flt(range_values[-1] + qty, precision)
+
+    return range_values
 
 
 def get_earliest_age(queue: list, date_field: str | int, filters: Filters) -> int:
-	"Calculate earliest age."
-	if filters.get("period_for_qty_sold"):
-		return min(date_diff(entry["outgoing_date"], entry["incoming_date"]) for entry in queue)
-	return date_diff(filters["to_date"], queue[0][date_field])
+    "Calculate earliest age."
+    if filters.get("period_for_qty_sold"):
+        return min(
+            date_diff(entry["outgoing_date"], entry["incoming_date"]) for entry in queue
+        )
+    return date_diff(filters["to_date"], queue[0][date_field])
 
 
 def get_latest_age(queue: list, date_field: str | int, filters: Filters) -> int:
-	"Calculate latest age."
-	if filters.get("period_for_qty_sold"):
-		return max(date_diff(entry["outgoing_date"], entry["incoming_date"]) for entry in queue)
-	return date_diff(filters["to_date"], queue[-1][date_field])
+    "Calculate latest age."
+    if filters.get("period_for_qty_sold"):
+        return max(
+            date_diff(entry["outgoing_date"], entry["incoming_date"]) for entry in queue
+        )
+    return date_diff(filters["to_date"], queue[-1][date_field])
 
 
 def get_columns(filters: Filters) -> list[dict]:
-	range_columns = []
-	setup_ageing_columns(filters, range_columns)
-	columns = [
-		{
-			"label": _("Item Code"),
-			"fieldname": "item_code",
-			"fieldtype": "Link",
-			"options": "Item",
-			"width": 100,
-		},
-		{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 100, "hidden":1},
-		{"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 200, "hidden":1},
-		{
-			"label": _("Item Group"),
-			"fieldname": "item_group",
-			"fieldtype": "Link",
-			"options": "Item Group",
-			"width": 100,
-		},
-		{
-			"label": _("Brand"),
-			"fieldname": "brand",
-			"fieldtype": "Link",
-			"options": "Brand",
-			"width": 100,
-		},
-	]
+    range_columns = []
+    setup_ageing_columns(filters, range_columns)
+    columns = [
+        {
+            "label": _("Item Code"),
+            "fieldname": "item_code",
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 100,
+        },
+        {
+            "label": _("Item Name"),
+            "fieldname": "item_name",
+            "fieldtype": "Data",
+            "width": 100,
+            "hidden": 1,
+        },
+        {
+            "label": _("Description"),
+            "fieldname": "description",
+            "fieldtype": "Data",
+            "width": 200,
+            "hidden": 1,
+        },
+        {
+            "label": _("Item Group"),
+            "fieldname": "item_group",
+            "fieldtype": "Link",
+            "options": "Item Group",
+            "width": 100,
+        },
+        {
+            "label": _("Brand"),
+            "fieldname": "brand",
+            "fieldtype": "Link",
+            "options": "Brand",
+            "width": 100,
+        },
+    ]
 
-	if filters.get("show_warehouse_wise_stock"):
-		columns += [
-			{
-				"label": _("Warehouse"),
-				"fieldname": "warehouse",
-				"fieldtype": "Link",
-				"options": "Warehouse",
-				"width": 100,
-			}
-		]
+    if filters.get("show_warehouse_wise_stock"):
+        columns += [
+            {
+                "label": _("Warehouse"),
+                "fieldname": "warehouse",
+                "fieldtype": "Link",
+                "options": "Warehouse",
+                "width": 100,
+            }
+        ]
 
-	qty_fieldtype = "Int" if filters.get("remove_precision") else "Float"
+    qty_fieldtype = "Int" if filters.get("remove_precision") else "Float"
 
-	# Adjust labels based on the queue being displayed
-	qty_label = _("Available Qty")
-	age_label = _("Average Age") if not filters.get("period_for_qty_sold") else _("Average Age of Consumption")
-	earliest_label = _("Earliest") if not filters.get("period_for_qty_sold") else _("Earliest Consumption")
-	latest_label = _("Latest") if not filters.get("period_for_qty_sold") else _("Latest Consumption")
+    # Adjust labels based on the queue being displayed
+    qty_label = _("Available Qty")
+    age_label = (
+        _("Average Age")
+        if not filters.get("period_for_qty_sold")
+        else _("Average Age of Consumption")
+    )
+    earliest_label = (
+        _("Earliest")
+        if not filters.get("period_for_qty_sold")
+        else _("Earliest Consumption")
+    )
+    latest_label = (
+        _("Latest")
+        if not filters.get("period_for_qty_sold")
+        else _("Latest Consumption")
+    )
 
-	columns.extend(
-		[
-			{"label": qty_label, "fieldname": "qty", "fieldtype": qty_fieldtype, "width": 100},
-			{"label": age_label, "fieldname": "average_age", "fieldtype": qty_fieldtype, "width": 100},
-		]
-	)
-	columns.extend(range_columns)
-	columns.extend(
-		[
-			{"label": earliest_label, "fieldname": "earliest", "fieldtype": "Int", "width": 80},
-			{"label": latest_label, "fieldname": "latest", "fieldtype": "Int", "width": 80},
-			{"label": _("UOM"), "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 100},
-		]
-	)
+    columns.extend(
+        [
+            {
+                "label": qty_label,
+                "fieldname": "qty",
+                "fieldtype": qty_fieldtype,
+                "width": 100,
+            },
+            {
+                "label": age_label,
+                "fieldname": "average_age",
+                "fieldtype": qty_fieldtype,
+                "width": 100,
+            },
+        ]
+    )
+    columns.extend(range_columns)
+    columns.extend(
+        [
+            {
+                "label": earliest_label,
+                "fieldname": "earliest",
+                "fieldtype": "Int",
+                "width": 80,
+            },
+            {
+                "label": latest_label,
+                "fieldname": "latest",
+                "fieldtype": "Int",
+                "width": 80,
+            },
+            {
+                "label": _("UOM"),
+                "fieldname": "uom",
+                "fieldtype": "Link",
+                "options": "UOM",
+                "width": 100,
+            },
+        ]
+    )
 
-	return columns
+    return columns
 
 
 def get_chart_data(data: list, filters: Filters) -> dict:
-	if not data:
-		return []
+    if not data:
+        return []
 
-	labels, datapoints = [], []
+    labels, datapoints = [], []
 
-	if filters.get("show_warehouse_wise_stock"):
-		return {}
+    if filters.get("show_warehouse_wise_stock"):
+        return {}
 
-	data.sort(key=lambda row: row[6], reverse=True)
+    data.sort(key=lambda row: row[6], reverse=True)
 
-	if len(data) > 10:
-		data = data[:10]
+    if len(data) > 10:
+        data = data[:10]
 
-	for row in data:
-		labels.append(row[0])
-		datapoints.append(row[6])
+    for row in data:
+        labels.append(row[0])
+        datapoints.append(row[6])
 
-	chart_title = _("Average Age") if not filters.get("period_for_qty_sold") else _("Average Age of Consumption")
+    chart_title = (
+        _("Average Age")
+        if not filters.get("period_for_qty_sold")
+        else _("Average Age of Consumption")
+    )
 
-	return {
-		"data": {"labels": labels, "datasets": [{"name": chart_title, "values": datapoints}]},
-		"type": "bar",
-	}
+    return {
+        "data": {
+            "labels": labels,
+            "datasets": [{"name": chart_title, "values": datapoints}],
+        },
+        "type": "bar",
+    }
 
 
 def setup_ageing_columns(filters: Filters, range_columns: list):
-	prev_range_value = 0
-	ranges = []
-	for range in filters.ranges:
-		ranges.append(f"{prev_range_value} - {range}")
-		prev_range_value = cint(range) + 1
+    prev_range_value = 0
+    ranges = []
+    for range in filters.ranges:
+        ranges.append(f"{prev_range_value} - {range}")
+        prev_range_value = cint(range) + 1
 
-	ranges.append(f"{prev_range_value} - Above")
+    ranges.append(f"{prev_range_value} - Above")
 
-	fieldtype = "Int" if filters.get("remove_precision") else "Float"
+    fieldtype = "Int" if filters.get("remove_precision") else "Float"
 
-	for i, label in enumerate(ranges):
-		fieldname = "range" + str(i + 1)
-		add_column(range_columns, label=_("Age ({0})").format(label), fieldname=fieldname, fieldtype=fieldtype)
+    for i, label in enumerate(ranges):
+        fieldname = "range" + str(i + 1)
+        add_column(
+            range_columns,
+            label=_("Age ({0})").format(label),
+            fieldname=fieldname,
+            fieldtype=fieldtype,
+        )
 
 
-def add_column(range_columns: list, label: str, fieldname: str, fieldtype: str = "Float", width: int = 140):
-	range_columns.append(dict(label=label, fieldname=fieldname, fieldtype=fieldtype, width=width))
+def add_column(
+    range_columns: list,
+    label: str,
+    fieldname: str,
+    fieldtype: str = "Float",
+    width: int = 140,
+):
+    range_columns.append(
+        dict(label=label, fieldname=fieldname, fieldtype=fieldtype, width=width)
+    )
 
 
 class FIFOSlots:
-	"Returns FIFO computed slots of inwarded stock as per date."
+    "Returns FIFO computed slots of inwarded stock as per date."
 
-	def __init__(self, filters: dict | None = None, sle: list | None = None):
-		self.item_details = {}
-		self.transferred_item_details = {}
-		self.serial_no_batch_purchase_details = {}
-		self.filters = filters
-		self.sle = sle
+    def __init__(self, filters: dict | None = None, sle: list | None = None):
+        self.item_details = {}
+        self.transferred_item_details = {}
+        self.serial_no_batch_purchase_details = {}
+        self.filters = filters
+        self.sle = sle
 
-	def generate(self) -> dict:
-		"""
-		Returns dict of the foll.g structure:
-		Key = Item A / (Item A, Warehouse A)
-		Key: {
-				'details' -> Dict: ** item details **,
-				'fifo_queue' -> List: ** list of lists containing entries/slots for existing stock,
-						consumed/updated and maintained via FIFO. **
-				'outgoing_queue' -> List: ** list of lists containing entries/slots for sales record,
-						consumed/updated and maintained via FIFO. **
-		}
-		"""
+    def generate(self) -> dict:
+        """
+        Returns dict of the foll.g structure:
+        Key = Item A / (Item A, Warehouse A)
+        Key: {
+                        'details' -> Dict: ** item details **,
+                        'fifo_queue' -> List: ** list of lists containing entries/slots for existing stock,
+                                        consumed/updated and maintained via FIFO. **
+                        'outgoing_queue' -> List: ** list of lists containing entries/slots for sales record,
+                                        consumed/updated and maintained via FIFO. **
+        }
+        """
 
-		from erpnext.stock.doctype.serial_and_batch_bundle.test_serial_and_batch_bundle import (
-			get_serial_nos_from_bundle,
-		)
+        from erpnext.stock.doctype.serial_and_batch_bundle.test_serial_and_batch_bundle import (
+            get_serial_nos_from_bundle,
+        )
 
-		stock_ledger_entries = self.sle
+        stock_ledger_entries = self.sle
 
-		bundle_wise_serial_nos = frappe._dict({})
-		if stock_ledger_entries is None:
-			bundle_wise_serial_nos = self.__get_bundle_wise_serial_nos()
+        bundle_wise_serial_nos = frappe._dict({})
+        if stock_ledger_entries is None:
+            bundle_wise_serial_nos = self.__get_bundle_wise_serial_nos()
 
-		with frappe.db.unbuffered_cursor():
-			if stock_ledger_entries is None:
-				stock_ledger_entries = self.__get_stock_ledger_entries()
+        with frappe.db.unbuffered_cursor():
+            if stock_ledger_entries is None:
+                stock_ledger_entries = self.__get_stock_ledger_entries()
 
-			for d in stock_ledger_entries:
-				key, fifo_queue, transferred_item_key = self.__init_key_stores(d)
+            for d in stock_ledger_entries:
+                key, fifo_queue, transferred_item_key = self.__init_key_stores(d)
 
-				if d.voucher_type == "Stock Reconciliation":
-					# get difference in qty shift as actual qty
-					prev_balance_qty = self.item_details[key].get("qty_after_transaction", 0)
-					d.actual_qty = flt(d.qty_after_transaction) - flt(prev_balance_qty)
+                if d.voucher_type == "Stock Reconciliation":
+                    # get difference in qty shift as actual qty
+                    prev_balance_qty = self.item_details[key].get(
+                        "qty_after_transaction", 0
+                    )
+                    d.actual_qty = flt(d.qty_after_transaction) - flt(prev_balance_qty)
 
-				serial_nos = get_serial_nos(d.serial_no) if d.serial_no else []
-				if d.serial_and_batch_bundle and d.has_serial_no:
-					if bundle_wise_serial_nos:
-						serial_nos = bundle_wise_serial_nos.get(d.serial_and_batch_bundle) or []
-					else:
-						serial_nos = get_serial_nos_from_bundle(d.serial_and_batch_bundle) or []
+                serial_nos = get_serial_nos(d.serial_no) if d.serial_no else []
+                if d.serial_and_batch_bundle and d.has_serial_no:
+                    if bundle_wise_serial_nos:
+                        serial_nos = (
+                            bundle_wise_serial_nos.get(d.serial_and_batch_bundle) or []
+                        )
+                    else:
+                        serial_nos = (
+                            get_serial_nos_from_bundle(d.serial_and_batch_bundle) or []
+                        )
 
-				if d.actual_qty > 0:
-					self.__compute_incoming_stock(d, fifo_queue, transferred_item_key, serial_nos)
-				else:
-					self.__compute_outgoing_stock(d, fifo_queue, transferred_item_key, serial_nos, key)
+                if d.actual_qty > 0:
+                    self.__compute_incoming_stock(
+                        d, fifo_queue, transferred_item_key, serial_nos
+                    )
+                else:
+                    self.__compute_outgoing_stock(
+                        d, fifo_queue, transferred_item_key, serial_nos, key
+                    )
 
-				self.__update_balances(d, key)
+                self.__update_balances(d, key)
 
-			# Note that stock_ledger_entries is an iterator, you can not reuse it  like a list
-			del stock_ledger_entries
+            # Note that stock_ledger_entries is an iterator, you can not reuse it  like a list
+            del stock_ledger_entries
 
-		if not self.filters.get("show_warehouse_wise_stock"):
-			# (Item 1, WH 1), (Item 1, WH 2) => (Item 1)
-			self.item_details = self.__aggregate_details_by_item(self.item_details)
+        if not self.filters.get("show_warehouse_wise_stock"):
+            # (Item 1, WH 1), (Item 1, WH 2) => (Item 1)
+            self.item_details = self.__aggregate_details_by_item(self.item_details)
 
-		return self.item_details
+        return self.item_details
 
-	def __init_key_stores(self, row: dict) -> tuple:
-		"Initialise keys and FIFO Queue."
+    def __init_key_stores(self, row: dict) -> tuple:
+        "Initialise keys and FIFO Queue."
 
-		key = (row.name, row.warehouse)
-		self.item_details.setdefault(key, {"details": row, "fifo_queue": [], "outgoing_queue": []})
-		fifo_queue = self.item_details[key]["fifo_queue"]
+        key = (row.name, row.warehouse)
+        self.item_details.setdefault(
+            key, {"details": row, "fifo_queue": [], "outgoing_queue": []}
+        )
+        fifo_queue = self.item_details[key]["fifo_queue"]
 
-		transferred_item_key = (row.voucher_no, row.name, row.warehouse)
-		self.transferred_item_details.setdefault(transferred_item_key, [])
+        transferred_item_key = (row.voucher_no, row.name, row.warehouse)
+        self.transferred_item_details.setdefault(transferred_item_key, [])
 
-		return key, fifo_queue, transferred_item_key
+        return key, fifo_queue, transferred_item_key
 
-	def __compute_incoming_stock(self, row: dict, fifo_queue: list, transfer_key: tuple, serial_nos: list):
-		"Update FIFO Queue on inward stock."
+    def __compute_incoming_stock(
+        self, row: dict, fifo_queue: list, transfer_key: tuple, serial_nos: list
+    ):
+        "Update FIFO Queue on inward stock."
 
-		transfer_data = self.transferred_item_details.get(transfer_key)
-		if transfer_data:
-			# inward/outward from same voucher, item & warehouse
-			# eg: Repack with same item, Stock reco for batch item
-			# consume transfer data and add stock to fifo queue
-			self.__adjust_incoming_transfer_qty(transfer_data, fifo_queue, row)
-		else:
-			if not serial_nos and not row.get("has_serial_no"):
-				if fifo_queue and flt(fifo_queue[0][0]) <= 0:
-					# neutralize 0/negative stock by adding positive stock
-					fifo_queue[0][0] += flt(row.actual_qty)
-					fifo_queue[0][1] = row.posting_date
-				else:
-					fifo_queue.append([flt(row.actual_qty), row.posting_date])
-				return
+        transfer_data = self.transferred_item_details.get(transfer_key)
+        if transfer_data:
+            # inward/outward from same voucher, item & warehouse
+            # eg: Repack with same item, Stock reco for batch item
+            # consume transfer data and add stock to fifo queue
+            self.__adjust_incoming_transfer_qty(transfer_data, fifo_queue, row)
+        else:
+            if not serial_nos and not row.get("has_serial_no"):
+                if fifo_queue and flt(fifo_queue[0][0]) <= 0:
+                    # neutralize 0/negative stock by adding positive stock
+                    fifo_queue[0][0] += flt(row.actual_qty)
+                    fifo_queue[0][1] = row.posting_date
+                else:
+                    fifo_queue.append([flt(row.actual_qty), row.posting_date])
+                return
 
-			for serial_no in serial_nos:
-				if self.serial_no_batch_purchase_details.get(serial_no):
-					fifo_queue.append([serial_no, self.serial_no_batch_purchase_details.get(serial_no)])
-				else:
-					self.serial_no_batch_purchase_details.setdefault(serial_no, row.posting_date)
-					fifo_queue.append([serial_no, row.posting_date])
+            for serial_no in serial_nos:
+                if self.serial_no_batch_purchase_details.get(serial_no):
+                    fifo_queue.append(
+                        [
+                            serial_no,
+                            self.serial_no_batch_purchase_details.get(serial_no),
+                        ]
+                    )
+                else:
+                    self.serial_no_batch_purchase_details.setdefault(
+                        serial_no, row.posting_date
+                    )
+                    fifo_queue.append([serial_no, row.posting_date])
 
-	def __compute_outgoing_stock(self, row: dict, fifo_queue: list, transfer_key: tuple, serial_nos: list, key: tuple):
-		"Update FIFO Queue on outward stock."
-		if row.voucher_type == "Stock Reconciliation":
-			return
-		
-		if serial_nos:
-			removed_entries = [entry for entry in fifo_queue if entry[0] in serial_nos]
-			fifo_queue[:] = [serial_no for serial_no in fifo_queue if serial_no[0] not in serial_nos]
-			for entry in removed_entries:
-				self.item_details[key]['outgoing_queue'].append({
-					'quantity': 1,
-					'incoming_date': entry[1],
-					'outgoing_date': row.posting_date
-				})
-			return
+    def __compute_outgoing_stock(
+        self,
+        row: dict,
+        fifo_queue: list,
+        transfer_key: tuple,
+        serial_nos: list,
+        key: tuple,
+    ):
+        "Update FIFO Queue on outward stock."
+        if row.voucher_type == "Stock Reconciliation":
+            return
 
-		qty_to_pop = abs(row.actual_qty)
-		while qty_to_pop:
-			slot = fifo_queue[0] if fifo_queue else [0, None]
-			if 0 < flt(slot[0]) <= qty_to_pop:
-				# qty to pop >= slot qty
-				# if +ve and not enough or exactly same balance in current slot, consume whole slot
-				qty_to_pop -= flt(slot[0])
-				popped_slot = fifo_queue.pop(0)
-				self.transferred_item_details[transfer_key].append(popped_slot)
-				self.item_details[key]['outgoing_queue'].append({
-					'quantity': popped_slot[0],
-					'incoming_date': popped_slot[1],
-					'outgoing_date': row.posting_date
-				})
-			elif not fifo_queue:
-				# negative stock, no balance but qty yet to consume
-				fifo_queue.append([-(qty_to_pop), row.posting_date])
-				self.transferred_item_details[transfer_key].append([qty_to_pop, row.posting_date])
-				qty_to_pop = 0
-			else:
-				# qty to pop < slot qty, ample balance
-				# consume actual_qty from first slot
-				consumed_qty = qty_to_pop
-				incoming_date = slot[1]
-				slot[0] = flt(slot[0]) - qty_to_pop
-				self.transferred_item_details[transfer_key].append([qty_to_pop, slot[1]])
-				self.item_details[key]['outgoing_queue'].append({
-					'quantity': consumed_qty,
-					'incoming_date': incoming_date,
-					'outgoing_date': row.posting_date
-				})
-				qty_to_pop = 0
+        if serial_nos:
+            removed_entries = [entry for entry in fifo_queue if entry[0] in serial_nos]
+            fifo_queue[:] = [
+                serial_no for serial_no in fifo_queue if serial_no[0] not in serial_nos
+            ]
+            for entry in removed_entries:
+                self.item_details[key]["outgoing_queue"].append(
+                    {
+                        "quantity": 1,
+                        "incoming_date": entry[1],
+                        "outgoing_date": row.posting_date,
+                    }
+                )
+            return
 
-	def __adjust_incoming_transfer_qty(self, transfer_data: dict, fifo_queue: list, row: dict):
-		"Add previously removed stock back to FIFO Queue."
-		transfer_qty_to_pop = flt(row.actual_qty)
+        qty_to_pop = abs(row.actual_qty)
+        while qty_to_pop:
+            slot = fifo_queue[0] if fifo_queue else [0, None]
+            if 0 < flt(slot[0]) <= qty_to_pop:
+                # qty to pop >= slot qty
+                # if +ve and not enough or exactly same balance in current slot, consume whole slot
+                qty_to_pop -= flt(slot[0])
+                popped_slot = fifo_queue.pop(0)
+                self.transferred_item_details[transfer_key].append(popped_slot)
+                self.item_details[key]["outgoing_queue"].append(
+                    {
+                        "quantity": popped_slot[0],
+                        "incoming_date": popped_slot[1],
+                        "outgoing_date": row.posting_date,
+                    }
+                )
+            elif not fifo_queue:
+                # negative stock, no balance but qty yet to consume
+                fifo_queue.append([-(qty_to_pop), row.posting_date])
+                self.transferred_item_details[transfer_key].append(
+                    [qty_to_pop, row.posting_date]
+                )
+                qty_to_pop = 0
+            else:
+                # qty to pop < slot qty, ample balance
+                # consume actual_qty from first slot
+                consumed_qty = qty_to_pop
+                incoming_date = slot[1]
+                slot[0] = flt(slot[0]) - qty_to_pop
+                self.transferred_item_details[transfer_key].append(
+                    [qty_to_pop, slot[1]]
+                )
+                self.item_details[key]["outgoing_queue"].append(
+                    {
+                        "quantity": consumed_qty,
+                        "incoming_date": incoming_date,
+                        "outgoing_date": row.posting_date,
+                    }
+                )
+                qty_to_pop = 0
 
-		def add_to_fifo_queue(slot):
-			if fifo_queue and flt(fifo_queue[0][0]) <= 0:
-				# neutralize 0/negative stock by adding positive stock
-				fifo_queue[0][0] += flt(slot[0])
-				fifo_queue[0][1] = slot[1]
-			else:
-				fifo_queue.append(slot)
+    def __adjust_incoming_transfer_qty(
+        self, transfer_data: dict, fifo_queue: list, row: dict
+    ):
+        "Add previously removed stock back to FIFO Queue."
+        transfer_qty_to_pop = flt(row.actual_qty)
 
-		while transfer_qty_to_pop:
-			if transfer_data and 0 < transfer_data[0][0] <= transfer_qty_to_pop:
-				# bucket qty is not enough, consume whole
-				transfer_qty_to_pop -= transfer_data[0][0]
-				add_to_fifo_queue(transfer_data.pop(0))
-			elif not transfer_data:
-				# transfer bucket is empty, extra incoming qty
-				add_to_fifo_queue([transfer_qty_to_pop, row.posting_date])
-				transfer_qty_to_pop = 0
-			else:
-				# ample bucket qty to consume
-				transfer_data[0][0] -= transfer_qty_to_pop
-				add_to_fifo_queue([transfer_qty_to_pop, transfer_data[0][1]])
-				transfer_qty_to_pop = 0
+        def add_to_fifo_queue(slot):
+            if fifo_queue and flt(fifo_queue[0][0]) <= 0:
+                # neutralize 0/negative stock by adding positive stock
+                fifo_queue[0][0] += flt(slot[0])
+                fifo_queue[0][1] = slot[1]
+            else:
+                fifo_queue.append(slot)
 
-	def __update_balances(self, row: dict, key: tuple | str):
-		self.item_details[key]["qty_after_transaction"] = row.qty_after_transaction
+        while transfer_qty_to_pop:
+            if transfer_data and 0 < transfer_data[0][0] <= transfer_qty_to_pop:
+                # bucket qty is not enough, consume whole
+                transfer_qty_to_pop -= transfer_data[0][0]
+                add_to_fifo_queue(transfer_data.pop(0))
+            elif not transfer_data:
+                # transfer bucket is empty, extra incoming qty
+                add_to_fifo_queue([transfer_qty_to_pop, row.posting_date])
+                transfer_qty_to_pop = 0
+            else:
+                # ample bucket qty to consume
+                transfer_data[0][0] -= transfer_qty_to_pop
+                add_to_fifo_queue([transfer_qty_to_pop, transfer_data[0][1]])
+                transfer_qty_to_pop = 0
 
-		if "total_qty" not in self.item_details[key]:
-			self.item_details[key]["total_qty"] = row.actual_qty
-		else:
-			self.item_details[key]["total_qty"] += row.actual_qty
+    def __update_balances(self, row: dict, key: tuple | str):
+        self.item_details[key]["qty_after_transaction"] = row.qty_after_transaction
 
-		self.item_details[key]["has_serial_no"] = row.has_serial_no
+        if "total_qty" not in self.item_details[key]:
+            self.item_details[key]["total_qty"] = row.actual_qty
+        else:
+            self.item_details[key]["total_qty"] += row.actual_qty
 
-	def __aggregate_details_by_item(self, wh_wise_data: dict) -> dict:
-		"Aggregate Item-Wh wise data into single Item entry."
-		item_aggregated_data = {}
-		for key, row in wh_wise_data.items():
-			item = key[0]
-			if not item_aggregated_data.get(item):
-				item_aggregated_data.setdefault(
-					item,
-					{
-						"details": frappe._dict(),
-						"fifo_queue": [],
-						"outgoing_queue": [],
-						"qty_after_transaction": 0.0,
-						"total_qty": 0.0,
-					},
-				)
-			item_row = item_aggregated_data.get(item)
-			item_row["details"].update(row["details"])
-			item_row["fifo_queue"].extend(row["fifo_queue"])
-			item_row["outgoing_queue"].extend(row["outgoing_queue"])
-			item_row["qty_after_transaction"] += flt(row["qty_after_transaction"])
-			item_row["total_qty"] += flt(row["total_qty"])
-			item_row["has_serial_no"] = row["has_serial_no"]
+        self.item_details[key]["has_serial_no"] = row.has_serial_no
 
-		return item_aggregated_data
+    def __aggregate_details_by_item(self, wh_wise_data: dict) -> dict:
+        "Aggregate Item-Wh wise data into single Item entry."
+        item_aggregated_data = {}
+        for key, row in wh_wise_data.items():
+            item = key[0]
+            if not item_aggregated_data.get(item):
+                item_aggregated_data.setdefault(
+                    item,
+                    {
+                        "details": frappe._dict(),
+                        "fifo_queue": [],
+                        "outgoing_queue": [],
+                        "qty_after_transaction": 0.0,
+                        "total_qty": 0.0,
+                    },
+                )
+            item_row = item_aggregated_data.get(item)
+            item_row["details"].update(row["details"])
+            item_row["fifo_queue"].extend(row["fifo_queue"])
+            item_row["outgoing_queue"].extend(row["outgoing_queue"])
+            item_row["qty_after_transaction"] += flt(row["qty_after_transaction"])
+            item_row["total_qty"] += flt(row["total_qty"])
+            item_row["has_serial_no"] = row["has_serial_no"]
 
-	def __get_stock_ledger_entries(self) -> Iterator[dict]:
-		sle = frappe.qb.DocType("Stock Ledger Entry")
-		item = self.__get_item_query()  # used as derived table in sle query
+        return item_aggregated_data
 
-		sle_query = (
-			frappe.qb.from_(sle)
-			.from_(item)
-			.select(
-				item.name,
-				item.item_name,
-				item.item_group,
-				item.brand,
-				item.description,
-				item.stock_uom,
-				item.has_serial_no,
-				sle.actual_qty,
-				sle.posting_date,
-				sle.voucher_type,
-				sle.voucher_no,
-				sle.serial_no,
-				sle.batch_no,
-				sle.qty_after_transaction,
-				sle.serial_and_batch_bundle,
-				sle.warehouse,
-			)
-			.where(
-				(sle.item_code == item.name)
-				& (sle.company == self.filters.get("company"))
-				& (sle.posting_date <= self.filters.get("to_date"))
-				& (sle.is_cancelled != 1)
-			)
-		)
+    def __get_stock_ledger_entries(self) -> Iterator[dict]:
+        sle = frappe.qb.DocType("Stock Ledger Entry")
+        item = self.__get_item_query()  # used as derived table in sle query
 
-		if self.filters.get("warehouse"):
-			sle_query = self.__get_warehouse_conditions(sle, sle_query)
-		elif self.filters.get("warehouse_type"):
-			warehouses = frappe.get_all(
-				"Warehouse",
-				filters={"warehouse_type": self.filters.get("warehouse_type"), "is_group": 0},
-				pluck="name",
-			)
+        sle_query = (
+            frappe.qb.from_(sle)
+            .from_(item)
+            .select(
+                item.name,
+                item.item_name,
+                item.item_group,
+                item.brand,
+                item.description,
+                item.stock_uom,
+                item.has_serial_no,
+                sle.actual_qty,
+                sle.posting_date,
+                sle.voucher_type,
+                sle.voucher_no,
+                sle.serial_no,
+                sle.batch_no,
+                sle.qty_after_transaction,
+                sle.serial_and_batch_bundle,
+                sle.warehouse,
+            )
+            .where(
+                (sle.item_code == item.name)
+                & (sle.company == self.filters.get("company"))
+                & (sle.posting_date <= self.filters.get("to_date"))
+                & (sle.is_cancelled != 1)
+            )
+        )
 
-			if warehouses:
-				sle_query = sle_query.where(sle.warehouse.isin(warehouses))
+        if self.filters.get("warehouse"):
+            sle_query = self.__get_warehouse_conditions(sle, sle_query)
+        elif self.filters.get("warehouse_type"):
+            warehouses = frappe.get_all(
+                "Warehouse",
+                filters={
+                    "warehouse_type": self.filters.get("warehouse_type"),
+                    "is_group": 0,
+                },
+                pluck="name",
+            )
 
-		sle_query = sle_query.orderby(sle.posting_date, sle.posting_time, sle.creation, sle.actual_qty)
+            if warehouses:
+                sle_query = sle_query.where(sle.warehouse.isin(warehouses))
 
-		return sle_query.run(as_dict=True, as_iterator=True)
+        sle_query = sle_query.orderby(
+            sle.posting_date, sle.posting_time, sle.creation, sle.actual_qty
+        )
 
-	def __get_bundle_wise_serial_nos(self) -> dict:
-		bundle = frappe.qb.DocType("Serial and Batch Bundle")
-		entry = frappe.qb.DocType("Serial and Batch Entry")
+        return sle_query.run(as_dict=True, as_iterator=True)
 
-		query = (
-			frappe.qb.from_(bundle)
-			.join(entry)
-			.on(bundle.name == entry.parent)
-			.select(bundle.name, entry.serial_no)
-			.where(
-				(bundle.docstatus == 1)
-				& (entry.serial_no.isnotnull())
-				& (bundle.company == self.filters.get("company"))
-				& (bundle.posting_date <= self.filters.get("to_date"))
-			)
-		)
+    def __get_bundle_wise_serial_nos(self) -> dict:
+        bundle = frappe.qb.DocType("Serial and Batch Bundle")
+        entry = frappe.qb.DocType("Serial and Batch Entry")
 
-		for field in ["item_code"]:
-			if self.filters.get(field):
-				query = query.where(bundle[field] == self.filters.get(field))
+        query = (
+            frappe.qb.from_(bundle)
+            .join(entry)
+            .on(bundle.name == entry.parent)
+            .select(bundle.name, entry.serial_no)
+            .where(
+                (bundle.docstatus == 1)
+                & (entry.serial_no.isnotnull())
+                & (bundle.company == self.filters.get("company"))
+                & (bundle.posting_date <= self.filters.get("to_date"))
+            )
+        )
 
-		if self.filters.get("warehouse"):
-			query = self.__get_warehouse_conditions(bundle, query)
+        for field in ["item_code"]:
+            if self.filters.get(field):
+                query = query.where(bundle[field] == self.filters.get(field))
 
-		bundle_wise_serial_nos = frappe._dict({})
-		for bundle_name, serial_no in query.run():
-			bundle_wise_serial_nos.setdefault(bundle_name, []).append(serial_no)
+        if self.filters.get("warehouse"):
+            query = self.__get_warehouse_conditions(bundle, query)
 
-		return bundle_wise_serial_nos
+        bundle_wise_serial_nos = frappe._dict({})
+        for bundle_name, serial_no in query.run():
+            bundle_wise_serial_nos.setdefault(bundle_name, []).append(serial_no)
 
-	def __get_item_query(self) -> str:
-		item_table = frappe.qb.DocType("Item")
+        return bundle_wise_serial_nos
 
-		item = frappe.qb.from_("Item").select(
-			"name", "item_name", "description", "stock_uom", "brand", "item_group", "has_serial_no"
-		)
+    def __get_item_query(self) -> str:
+        item_table = frappe.qb.DocType("Item")
 
-		if self.filters.get("item_code"):
-			item = item.where(item_table.item_code == self.filters.get("item_code"))
+        item = frappe.qb.from_("Item").select(
+            "name",
+            "item_name",
+            "description",
+            "stock_uom",
+            "brand",
+            "item_group",
+            "has_serial_no",
+        )
 
-		if self.filters.get("brand"):
-			item = item.where(item_table.brand == self.filters.get("brand"))
+        if self.filters.get("item_code"):
+            item = item.where(item_table.item_code == self.filters.get("item_code"))
 
-		return item
+        if self.filters.get("brand"):
+            item = item.where(item_table.brand == self.filters.get("brand"))
 
-	def __get_warehouse_conditions(self, sle, sle_query) -> str:
-		warehouse = frappe.qb.DocType("Warehouse")
-		lft, rgt = frappe.db.get_value("Warehouse", self.filters.get("warehouse"), ["lft", "rgt"])
+        return item
 
-		warehouse_results = (
-			frappe.qb.from_(warehouse)
-			.select("name")
-			.where((warehouse.lft >= lft) & (warehouse.rgt <= rgt))
-			.run()
-		)
-		warehouse_results = [x[0] for x in warehouse_results]
+    def __get_warehouse_conditions(self, sle, sle_query) -> str:
+        warehouse = frappe.qb.DocType("Warehouse")
+        lft, rgt = frappe.db.get_value(
+            "Warehouse", self.filters.get("warehouse"), ["lft", "rgt"]
+        )
 
-		return sle_query.where(sle.warehouse.isin(warehouse_results))
+        warehouse_results = (
+            frappe.qb.from_(warehouse)
+            .select("name")
+            .where((warehouse.lft >= lft) & (warehouse.rgt <= rgt))
+            .run()
+        )
+        warehouse_results = [x[0] for x in warehouse_results]
+
+        return sle_query.where(sle.warehouse.isin(warehouse_results))
+
 
 def convert_alternative_uom(data, filters):
-	alternative_uom = filters.get('alternative_uom')
-	
-	if alternative_uom:
-		columns_to_convert = [5, 7, 8, 9, 10]
-		for row in data:
-			converstion_factor = get_conversion_factor(row[0], alternative_uom)
+    alternative_uom = filters.get("alternative_uom")
 
-			for col_index in columns_to_convert:
-				if col_index  < len(row):
-					value = row[col_index]
-					if isinstance(value, (int, float)):
-						row[col_index] = value / converstion_factor
+    if alternative_uom:
+        columns_to_convert = [5, 7, 8, 9, 10]
+        for row in data:
+            converstion_factor = get_conversion_factor(row[0], alternative_uom)
 
-	return data
+            for col_index in columns_to_convert:
+                if col_index < len(row):
+                    value = row[col_index]
+                    if isinstance(value, (int, float)):
+                        row[col_index] = value / converstion_factor
+
+    return data
+
 
 def get_conversion_factor(item_code, alternative_uom):
-	uom_conversion = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "uom": alternative_uom}, "conversion_factor")
-	return uom_conversion or 1
+    uom_conversion = frappe.db.get_value(
+        "UOM Conversion Detail",
+        {"parent": item_code, "uom": alternative_uom},
+        "conversion_factor",
+    )
+    return uom_conversion or 1

@@ -28,7 +28,7 @@ frappe.ui.form.on("Suppliers Process Statement Of Accounts", {
         let url = frappe.urllib.get_full_url(
           "/api/method/nl_banadir.banadir_customization_reports.doctype.suppliers_process_statement_of_accounts.suppliers_process_statement_of_accounts.download_statements?" +
             "document_name=" +
-            encodeURIComponent(frm.doc.name)
+            encodeURIComponent(frm.doc.name),
         );
         $.ajax({
           url: url,
@@ -64,7 +64,7 @@ frappe.ui.form.on("Suppliers Process Statement Of Accounts", {
     if (frm.doc.__islocal) {
       frm.set_value(
         "from_date",
-        frappe.datetime.add_months(frappe.datetime.get_today(), -1)
+        frappe.datetime.add_months(frappe.datetime.get_today(), -1),
       );
       frm.set_value("to_date", frappe.datetime.get_today());
     }

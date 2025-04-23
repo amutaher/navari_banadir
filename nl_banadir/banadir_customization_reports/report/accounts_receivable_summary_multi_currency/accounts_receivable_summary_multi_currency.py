@@ -5,7 +5,7 @@
 
 import frappe
 from frappe import _, scrub
-from frappe.utils import cint, flt, getdate, nowdate
+from frappe.utils import cint, flt
 from frappe.query_builder.functions import Abs, Date, Sum
 
 from erpnext.accounts.party import get_partywise_advanced_payment_amount
@@ -129,7 +129,6 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
             # Helper function to find exchange rate
             def get_exchange_rate(from_currency, to_currency):
-
                 if from_currency == to_currency:
                     return (1, None)
 
@@ -155,7 +154,6 @@ class AccountsReceivableSummary(ReceivablePayableReport):
 
             # Convert amounts to presentation currency
             if self.filters.get("presentation_currency"):
-
                 from_currency = frappe.get_cached_value(
                     "Company", self.filters.company, "default_currency"
                 )
@@ -166,7 +164,6 @@ class AccountsReceivableSummary(ReceivablePayableReport):
                 conversion_rate = get_exchange_rate(from_currency, to_currency)
 
                 if not conversion_rate:
-
                     frappe.throw(
                         _("Exchange rate not found for {0} to {1}").format(
                             from_currency, to_currency

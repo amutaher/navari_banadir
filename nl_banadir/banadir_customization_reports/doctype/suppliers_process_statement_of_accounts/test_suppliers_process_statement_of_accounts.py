@@ -13,18 +13,18 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
 class UnitTestSuppliersProcessStatementOfAccounts(UnitTestCase):
-	"""
-	Unit tests for SuppliersProcessStatementOfAccounts.
-	Use this class for testing individual functions and methods.
-	"""
+    """
+    Unit tests for SuppliersProcessStatementOfAccounts.
+    Use this class for testing individual functions and methods.
+    """
 
-	pass
+    pass
 
 
 class IntegrationTestSuppliersProcessStatementOfAccounts(IntegrationTestCase):
-	"""
-	Integration tests for SuppliersProcessStatementOfAccounts.
-	Use this class for testing interactions between multiple components.
-	"""
+    """
+    Integration tests for SuppliersProcessStatementOfAccounts.
+    Use this class for testing interactions between multiple components.
+    """
 
-	pass
+    pass

@@ -4,9 +4,8 @@
 from typing import TypedDict
 
 import frappe
-import erpnext
 import copy
-from frappe.query_builder import DocType, Case, Field
+from frappe.query_builder import DocType, Field
 from frappe.utils import getdate
 from erpnext.accounts.report.utils import convert
 
@@ -69,7 +68,6 @@ class InterCompanyPartiesMatchReport:
         return self.columns, self.data
 
     def get_columns(self):
-
         if self.filters.get("invoice_only"):
             return self.get_invoice_columns()
 
@@ -315,7 +313,7 @@ class InterCompanyPartiesMatchReport:
         Journal_Entry = DocType("Journal Entry")
 
         if self.filters.get("reference_company") and self.filters.get("party_type"):
-            party_type = self.filters.get("party_type")
+            # party_type = self.filters.get("party_type")
 
             query = (
                 frappe.qb.from_(Journal_Entry_Account)
@@ -421,9 +419,13 @@ class InterCompanyPartiesMatchReport:
 
             if self.filters.get("compare_randomly"):
                 self.data = []
-                self.filters.get("compare_by_amount") == False
-                party_journals = self.get_journal_entries()
-                opening_entries = self.get_reverse_opening_entries()
+                # self.filters.get("compare_by_amount") == False
+                # party_journals = self.get_journal_entries()
+                # opening_entries = self.get_reverse_opening_entries()
+                if not self.filters.get("compare_by_amount"):
+                    # Only do this if compare_by_amount is False
+                    party_journals = self.get_journal_entries()
+                    opening_entries = self.get_reverse_opening_entries()
 
                 if party_journals and not journals:
                     if opening_entries:
@@ -493,22 +495,16 @@ class InterCompanyPartiesMatchReport:
                                         "is_opening": True,
                                         "reference_journal_posting_date": sorted_party_journals[
                                             i
-                                        ].get(
-                                            "party_journal_posting_date"
-                                        ),
+                                        ].get("party_journal_posting_date"),
                                         "reference_company": sorted_party_journals[
                                             i
                                         ].get("representative_company"),
                                         "reference_company_debit": sorted_party_journals[
                                             i
-                                        ].get(
-                                            "representative_company_debit"
-                                        ),
+                                        ].get("representative_company_debit"),
                                         "reference_company_credit": sorted_party_journals[
                                             i
-                                        ].get(
-                                            "representative_company_credit"
-                                        ),
+                                        ].get("representative_company_credit"),
                                         "reference_journal": sorted_party_journals[
                                             i
                                         ].get("party_journal"),
@@ -552,7 +548,6 @@ class InterCompanyPartiesMatchReport:
                                 "representative_company_debit": None,
                                 "representative_company_credit": None,
                                 "representative_company_closing_balance": None,
-                                "representative_company_closing_balance": None,
                             }
                             updated_journals.append({**item, **updated_item})
 
@@ -581,7 +576,6 @@ class InterCompanyPartiesMatchReport:
     def process_reference_journals(self, journals):
         updated_journals = []
         for journal in journals:
-
             if journal.get("voucher_type") == "Opening Entry" and not journal.get(
                 "is_reverse"
             ):
@@ -969,7 +963,6 @@ class InterCompanyPartiesMatchReport:
 
             if journals and self.amount_journals:
                 for journal in journals:
-
                     if journal.get("voucher_type") == "Opening Entry":
                         opening_entry = {
                             "is_opening": True,
@@ -1053,7 +1046,6 @@ class InterCompanyPartiesMatchReport:
                                     break
 
                         if amount_journal.get("voucher_type") == "Opening Entry":
-
                             updated_journal = {}
                             opening_entry = {
                                 "is_opening": True,
@@ -1200,7 +1192,6 @@ class InterCompanyPartiesMatchReport:
                 ]
 
             else:
-
                 merged_journals[item] = {**d, "is_reverse": True}
 
         return list(merged_journals.values())

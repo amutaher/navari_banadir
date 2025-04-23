@@ -81,7 +81,7 @@ frappe.query_reports["Accounts Receivable Summary Multi Currency"] = {
         frappe.query_report.set_filter_value("party", "");
         frappe.query_report.toggle_filter_display(
           "customer_group",
-          frappe.query_report.get_filter_value("party_type") !== "Customer"
+          frappe.query_report.get_filter_value("party_type") !== "Customer",
         );
       },
     },
@@ -169,7 +169,7 @@ frappe.query_reports["Accounts Receivable Summary Multi Currency"] = {
         frappe.set_route("query-report", "Accounts Receivable Multi Currency", {
           company: filters.company,
         });
-      }
+      },
     );
   },
 };
