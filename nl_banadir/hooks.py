@@ -51,6 +51,7 @@ doc_events = {
         "autoname": "nl_banadir.banadir_customization_reports.controllers.purchase_invoice.auto_name",
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.shipping_details.sync_shipping_details",
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+        "before_cancel": "nl_banadir.banadir_customization_reports.controllers.purchase_invoice.before_cancel",
     },
     "Payment Entry": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.payment_entry_before_submit",

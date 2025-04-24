@@ -396,10 +396,44 @@ WHERE
             JOIN
                 `tabSubcontracting Receipt` sr ON sci.parent = sr.name
             WHERE
-                sci.subcontracting_order = '{subcontracting_order}'
+                sci.subcontracting_order = '{subcontracting_order}' AND
+                sci.docstatus = '1'
             """,
             as_dict=True,
         )
+
+        # TODO: Rather than assuming all received items are equal, try to capture data of each one of them(Complex)
+        # for receipt in receipts:
+        # 			# frappe.throw(str(record.upper_item))
+        # 			if receipt.upper_stock == record.upper_item:
+        # 				# frappe.throw(str(receipt.received_quantity))
+
+        # 				received_qty = receipt.received_quantity if receipt else 0
+        # 				# frappe.throw(str(received_qty))
+        # 				balance_quantity = insole_data["issued_qty"] - received_qty
+        # 				qty_issued_machine = record.get("qty_issued_machine") or 0
+        # 				upper_stock = received_qty - qty_issued_machine
+        # 				record.update(
+        # 					{
+        # 						"quantity_issued": insole_data["issued_qty"],
+        # 						"issued_date": insole_data["issued_date"],
+        # 						"received_quantity": received_qty,
+        # 						"balance_quantity": balance_quantity,
+        # 						"subcontractor_name_po": insole_data["subcontractor_name_po"],
+        # 						"upper_stock": upper_stock,
+        # 					}
+        # 					)
+        # 			else:
+        # 				record.update(
+        # 					{
+        # 						"quantity_issued": 0,
+        # 						"received_quantity": 0,
+        # 						"balance_quantity": 0,
+        # 						"subcontractor_name_po": None,
+        # 						"upper_stock": None,
+        # 						"issued_date": None,
+        # 					}
+        # 				)
         # frappe.throw(str(receipt))
         received_qty = receipt[0].received_quantity if receipt else 0
         balance_quantity = insole_data["issued_qty"] - received_qty
@@ -461,7 +495,6 @@ def update_insole_stock_qty(record):
 
 def update_stock_details(record):
     finished_goods_work_order = record.get("finished_goods_work_order_no")
-    # fresh_qty_issued = record.get("fresh_qty_issued") or 0
     qty_issued_machine = record.get("qty_issued_machine") or 0
     stock_entry = frappe.db.get_value(
         "Stock Entry", {"work_order": finished_goods_work_order, "docstatus": 1}, "name"
