@@ -11,6 +11,7 @@ frappe.ui.form.on("Work Order", {
           callback: function (r) {
             if (r.message && !r.message.all_completed) {
               frm.remove_custom_button("Finish");
+              frm.remove_custom_button("Material Consumption");
             }
           },
         });
