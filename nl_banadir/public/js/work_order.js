@@ -96,4 +96,12 @@ frappe.ui.form.on("Work Order Operations Item", {
       frappe.model.set_value(cdt, cdn, "status", "Completed");
     }
   },
+  completed_qty: function (frm, cdt, cdn) {
+    const row = locals[cdt][cdn];
+    if (row.qty_issued == 0.0) {
+      frappe.throw(
+        "Please issue the material before completing the operation.",
+      );
+    }
+  },
 });
