@@ -15,8 +15,10 @@ frappe.ui.form.on("Work Order", {
             }
           },
         });
-      }, 1000);
+      }, 10);
     }
+
+    editable(frm);
 
     if (frm.doc.custom_subcontractors) {
       frm.doc.custom_subcontractors.forEach((row) => {
@@ -96,4 +98,24 @@ frappe.ui.form.on("Work Order Operations Item", {
       frappe.model.set_value(cdt, cdn, "status", "Completed");
     }
   },
+  completed_qty: function (frm, cdt, cdn) {
+    const row = locals[cdt][cdn];
+
+    if (row.qty_issued == 0.0) {
+      frappe.throw(
+        "Please issue the material before completing the operation.",
+      );
+      frappe.model.set_value(cdt, cdn, "completed_qty", 0);
+      return; // stops further execution
+    }
+
+    frm.refresh_field("custom_subcontractors");
+  },
 });
+
+function editable(frm) {
+  const is_submitted = frm.doc.docstatus === 1;
+  frm.set_df_property("custom_subcontractors", "read_only", !is_submitted);
+
+  frm.set_df_property("custom_subcontractors", "hidden", !is_submitted);
+}
