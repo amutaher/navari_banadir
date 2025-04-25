@@ -1,3 +1,5 @@
+from datetime import date
+
 import frappe
 
 
@@ -5,6 +7,8 @@ def on_submit(doc, method=None) -> None:
     """
     Override on_submit doc event of the Sales Invoice to create Shipping Detail
     """
+
+    book_sales_partner_commission(doc)
 
     if doc.custom_is_export_sale:
         if frappe.db.exists("Shipping Detail", doc.name):
@@ -78,62 +82,44 @@ def on_cancel(doc, method=None) -> None:
 # nl_banadir.banadir_customization_reports.overrides.sales_invoice.on_submit
 
 
-def process_shipping_sync(doc):
-    """
-    Sync shipping details across all invoices linked by transit_no and update shipping status if needed.
-    This runs in the background.
-    """
+def book_sales_partner_commission(doc):
+    if doc.sales_partner and doc.commission_amount > 0:
+        frappe.log_error("Exectuted")
+        try:
+            accs = frappe.db.get_all(
+                "Sales Partner Account",
+                filters={"parent": doc.sales_partner, "company": doc.company},
+                fields=["payable_account"],
+            )
 
-    fields_to_sync = [
-        "custom_container_no",
-        "custom_port_of_loading",
-        "custom_bill_of_landing",
-        "custom_bil",
-        "custom_estimated_date_of_departure",
-        "custom_destination",
-        "custom_port_of_discharge",
-        "custom_container_quantity",
-        "custom_estimated_date_of_arrival",
-        "custom_actual_arrival_date",
-        "custom_shipping_status",
-    ]
+            if not accs:
+                frappe.log_error("no account")
+                return
 
-    original_doc = frappe.get_doc(doc.doctype, doc.name, for_update=False)
-
-    fields_changed = False
-    for field in fields_to_sync:
-        if doc.get(field) != original_doc.get(field):
-            fields_changed = True
-            break
-
-    if not fields_changed:
-        return
-
-    # Get all transit numbers from the current invoice
-    transit_numbers = [row.transit_no for row in doc.get("custom_transit_number")]
-
-    if not transit_numbers:
-        return
-
-    # Find all related invoices (Sales and Purchase) with matching transit_no
-    related_invoices = frappe.get_all(
-        "Transit Numbers",
-        filters={"transit_no": ["in", transit_numbers]},
-        fields=["parent", "parenttype"],
-        distinct=True,
-    )
-
-    values_to_update = {field: doc.get(field) for field in fields_to_sync}
-
-    if doc.get("custom_actual_arrival_date") and doc.get(
-        "custom_actual_arrival_date"
-    ) != original_doc.get("custom_actual_arrival_date"):
-        values_to_update["custom_shipping_status"] = "Completed"
-
-    for inv in related_invoices:
-        if inv.parent == doc.name and inv.parenttype == doc.doctype:
-            continue
-
-        frappe.db.set_value(
-            inv.parenttype, inv.parent, values_to_update, update_modified=True
-        )
+            payable_acc = accs[0].payable_account
+            journal_entry = frappe.new_doc("Journal Entry")
+            journal_entry.voucher_type = "Journal Entry"
+            journal_entry.company = doc.company
+            journal_entry.posting_date = date.today()
+            journal_entry.append(
+                "accounts",
+                {
+                    "account": doc.commission_expense_account,
+                    "credit_in_account_currency": doc.total_commission,
+                },
+            )
+            journal_entry.append(
+                "accounts",
+                {
+                    "account": payable_acc,
+                    "party_type": "Sales Partner",
+                    "party": doc.sales_partner,
+                    "debit_in_account_currency": doc.total_commission,
+                },
+            )
+            journal_entry.insert()
+            doc.journal_entry = journal_entry.name
+        except Exception:
+            frappe.log_error(
+                "Error while creating Journal Entry", frappe.get_traceback()
+            )
