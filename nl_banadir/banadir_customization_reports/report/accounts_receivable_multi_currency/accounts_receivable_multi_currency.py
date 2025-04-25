@@ -460,15 +460,6 @@ class ReceivablePayableReport:
         self.set_party_details(row)
         self.set_ageing(row)
 
-        # Apply due_date filter
-        if self.filters.get("due_date"):
-            if row.get("due_date"):
-                try:
-                    if getdate(row.get("due_date")) > getdate(self.filters.due_date):
-                        return
-                except Exception as e:
-                    return
-
         if self.filters.get("group_by_party"):
             self.update_sub_total_row(row, row.party)
             if self.previous_party and (self.previous_party != row.party):
