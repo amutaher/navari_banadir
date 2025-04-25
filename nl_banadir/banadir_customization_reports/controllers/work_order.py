@@ -88,6 +88,7 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
     purchase_invoice.update_stock = 0
     purchase_invoice.custom_work_order = custom_work_order
     purchase_invoice.custom_invoice_no = custom_invoice_no
+    purchase_invoice.buying_price_list = ""
 
     purchase_invoice.append(
         "items",
@@ -101,6 +102,7 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
             else None,
         },
     )
+
     # frappe.throw(str(purchase_invoice.items))
 
     purchase_invoice.insert()
