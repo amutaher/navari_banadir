@@ -32,6 +32,12 @@ fixtures = [
                     "Journal Entry-custom_company_group",
                     "Journal Entry-custom_cost_center",
                     "Journal Entry-custom_project",
+                    "Sales Invoice-custom_journal_entry",
+                    "Sales Invoice-custom_commission_amount",
+                    "Sales Invoice-custom_commission_expense_account",
+                    "Sales Partner-custom_sales_partner_accounts",
+                    "Sales Partner-custom_section_break_hybkd",
+                    "Sales Partner-custom_commission_rate_amount",
                 ),
             ]
         ],
