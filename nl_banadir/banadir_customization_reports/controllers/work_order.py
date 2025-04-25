@@ -3,6 +3,7 @@ import frappe
 
 from frappe.model.naming import make_autoname
 from frappe import _
+from datetime import datetime
 
 
 def before_save(doc, method=None):
@@ -141,6 +142,7 @@ def on_update(doc, method=None):
     validate_invoice_created(doc)
     validate_operations(doc)
     validate_operations_seq(doc)
+    validate_operation_dates(doc)
     for operation in doc.custom_subcontractors:
         operation_doc = frappe.get_doc(
             "Work Order Operations Item", operation.get("name")
@@ -380,3 +382,47 @@ def set_read_only_for_invoiced_subcontractors(doc):
                         Field changed: <strong>{frappe.unscrub(field)}</strong>
                         """,
                     )
+
+
+def validate_operation_dates(doc):
+    """
+    Validates that the In Progress Date of an operation is not earlier than
+    the Completed Date of the previous operation in sequence.
+
+    Args:
+        doc: The Work Order document
+        method: The trigger method (not used but required for hooks)
+    """
+    if not doc.custom_subcontractors or len(doc.custom_subcontractors) <= 1:
+        return
+
+    operations = sorted(doc.custom_subcontractors, key=lambda x: x.idx)
+
+    for i in range(1, len(operations)):
+        current_op = operations[i]
+        previous_op = operations[i - 1]
+
+        if not current_op.in_progress_date or not previous_op.completed_date:
+            continue
+
+        current_start_date = datetime.strptime(
+            str(current_op.in_progress_date), "%Y-%m-%d"
+        )
+        previous_end_date = datetime.strptime(
+            str(previous_op.completed_date), "%Y-%m-%d"
+        )
+
+        if current_start_date < previous_end_date:
+            frappe.throw(
+                _(
+                    "Operation <b>{0}</b> cannot start before previous operation <b>{2}</b> is completed. "
+                    "Please ensure the In Progress Date ({4}) is after the Completed Date ({5}) of the previous operation."
+                ).format(
+                    current_op.operations,
+                    current_op.idx,
+                    previous_op.operations,
+                    previous_op.idx,
+                    current_op.in_progress_date,
+                    previous_op.completed_date,
+                )
+            )
