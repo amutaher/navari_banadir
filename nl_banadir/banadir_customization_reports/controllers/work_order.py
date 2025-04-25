@@ -154,11 +154,12 @@ def on_update(doc, method=None):
                 frappe.throw(
                     f"Issued quantity for operation '{operation_doc.operations}' cannot be 0 or less."
                 )
-            if operation_doc.qty_issued > operation_doc.completed_qty:
-                frappe.throw(
-                    f"Issued quantity ({operation_doc.qty_issued}) for operation '{operation_doc.operations}' "
-                    f"cannot exceed the completed quantity ({operation_doc.completed_qty})."
-                )
+                # Uncomment the following lines if you want to restrict the issued quantity
+            # if operation_doc.qty_issued > operation_doc.completed_qty:
+            #     frappe.throw(
+            #         f"Issued quantity ({operation_doc.qty_issued}) for operation '{operation_doc.operations}' "
+            #         f"cannot exceed the completed quantity ({operation_doc.completed_qty})."
+            #     )
 
             create_purchase_invoice(
                 doc=doc,
