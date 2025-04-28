@@ -32,6 +32,7 @@ fixtures = [
                     "Journal Entry-custom_company_group",
                     "Journal Entry-custom_cost_center",
                     "Journal Entry-custom_project",
+                    "Selling Settings-custom_update_item_price_internal_customer",
                 ),
             ]
         ],
