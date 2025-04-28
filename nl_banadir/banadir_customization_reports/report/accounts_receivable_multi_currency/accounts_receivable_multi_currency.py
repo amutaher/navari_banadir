@@ -54,7 +54,7 @@ class ReceivablePayableReport:
         self.ple = qb.DocType("Payment Ledger Entry")
         self.filters.report_date = getdate(self.filters.report_date or nowdate())
         self.age_as_on = (
-            getdate(nowdate())
+            self.filters.report_date
             if self.filters.report_date > getdate(nowdate())
             else self.filters.report_date
         )
