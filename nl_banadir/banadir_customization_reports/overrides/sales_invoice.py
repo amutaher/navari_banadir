@@ -1,3 +1,5 @@
+from datetime import date
+
 import frappe
 
 
@@ -5,6 +7,8 @@ def on_submit(doc, method=None) -> None:
     """
     Override on_submit doc event of the Sales Invoice to create Shipping Detail
     """
+
+    book_sales_partner_commission(doc)
 
     if doc.custom_is_export_sale:
         if frappe.db.exists("Shipping Detail", doc.name):
@@ -37,34 +41,21 @@ def update_shipping_details_on_save_after_submit(doc, method=None) -> None:
     """
     Update shipping details when the Sales Invoice is updated after submit.
     """
-    if doc.custom_is_export_sale:
-        try:
-            shipping_detail = frappe.get_doc("Shipping Detail", doc.name)
-            shipping_detail.company = doc.company
-            shipping_detail.customer = doc.customer
-            shipping_detail.container_no = doc.custom_container_no
-            shipping_detail.port_of_loading = doc.custom_port_of_loading
-            shipping_detail.estimated_date_of_departure = (
-                doc.custom_estimated_date_of_departure
-            )
-            shipping_detail.estimated_date_of_arrival = (
-                doc.custom_estimated_date_of_arrival
-            )
-            shipping_detail.actual_arrival_date = doc.custom_actual_arrival_date
-            shipping_detail.destination = doc.custom_destination
-            shipping_detail.port_of_discharge = doc.custom_port_of_discharge
+    fields_to_update = [
+        "container_no",
+        "port_of_loading",
+        "estimated_date_of_departure",
+        "destination",
+        "port_of_discharge",
+        "estimated_date_of_arrival",
+        "actual_arrival_date",
+    ]
 
-            shipping_detail.save(ignore_permissions=True)
+    values_to_update = {field: doc.get(f"custom_{field}") for field in fields_to_update}
 
-            frappe.db.commit()
-
-        except frappe.DoesNotExistError:
-            frappe.log_error(f"Shipping Detail not found: {doc.name}")
-        except Exception as e:
-            frappe.log_error(
-                frappe.get_traceback(),
-                f"Error updating Shipping Detail for {doc.name}: {str(e)}",
-            )
+    frappe.db.set_value(
+        "Shipping Detail", doc.name, values_to_update, update_modified=True
+    )
 
 
 def on_cancel(doc, method=None) -> None:
@@ -89,3 +80,46 @@ def on_cancel(doc, method=None) -> None:
 
 
 # nl_banadir.banadir_customization_reports.overrides.sales_invoice.on_submit
+
+
+def book_sales_partner_commission(doc):
+    if doc.sales_partner and doc.commission_amount > 0:
+        frappe.log_error("Exectuted")
+        try:
+            accs = frappe.db.get_all(
+                "Sales Partner Account",
+                filters={"parent": doc.sales_partner, "company": doc.company},
+                fields=["payable_account"],
+            )
+
+            if not accs:
+                frappe.log_error("no account")
+                return
+
+            payable_acc = accs[0].payable_account
+            journal_entry = frappe.new_doc("Journal Entry")
+            journal_entry.voucher_type = "Journal Entry"
+            journal_entry.company = doc.company
+            journal_entry.posting_date = date.today()
+            journal_entry.append(
+                "accounts",
+                {
+                    "account": doc.commission_expense_account,
+                    "credit_in_account_currency": doc.total_commission,
+                },
+            )
+            journal_entry.append(
+                "accounts",
+                {
+                    "account": payable_acc,
+                    "party_type": "Sales Partner",
+                    "party": doc.sales_partner,
+                    "debit_in_account_currency": doc.total_commission,
+                },
+            )
+            journal_entry.insert()
+            doc.journal_entry = journal_entry.name
+        except Exception:
+            frappe.log_error(
+                "Error while creating Journal Entry", frappe.get_traceback()
+            )

@@ -54,7 +54,7 @@ class ReceivablePayableReport:
         self.ple = qb.DocType("Payment Ledger Entry")
         self.filters.report_date = getdate(self.filters.report_date or nowdate())
         self.age_as_on = (
-            getdate(nowdate())
+            self.filters.report_date
             if self.filters.report_date > getdate(nowdate())
             else self.filters.report_date
         )
@@ -930,12 +930,6 @@ class ReceivablePayableReport:
         else:
             self.qb_selection_filter.append(
                 self.ple.posting_date.lte(self.filters.report_date)
-            )
-
-        # Add due date filter if provided
-        if self.filters.get("due_date"):
-            self.qb_selection_filter.append(
-                self.ple.due_date == getdate(self.filters.due_date)
             )
 
         ple = qb.DocType("Payment Ledger Entry")
