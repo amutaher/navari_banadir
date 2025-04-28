@@ -23,10 +23,11 @@ def validate_branch_company(doc, method):
         )
 
 
-def validate_branch_company_item_level(doc, method):
+def validate_branch_company_item_level(doc):
     """
     Validates that the branch belongs to the correct company at the item level.
     This applies to multiple doctypes like Sales Invoice, Purchase Invoice, etc.
+
     """
 
     for item in doc.accounts:
@@ -59,3 +60,63 @@ def check_work_order_ops():
         pluck="name",
     )
     return {"all_completed": len(incomplete_ops) == 0}
+
+
+def update_or_create_item_price(item_code, price_list, rate, currency):
+    existing_item_price = frappe.db.exists(
+        "Item Price", {"item_code": item_code, "price_list": price_list}
+    )
+
+    if existing_item_price:
+        item_price_doc = frappe.get_doc("Item Price", existing_item_price)
+        item_price_doc.price_list_rate = rate
+        item_price_doc.currency = currency
+        item_price_doc.save(ignore_permissions=True)
+        frappe.db.commit()
+    else:
+        # Create a new Item Price
+        frappe.get_doc(
+            {
+                "doctype": "Item Price",
+                "item_code": item_code,
+                "price_list": price_list,
+                "price_list_rate": rate,
+                "currency": currency,
+            }
+        ).insert(ignore_permissions=True)
+        frappe.db.commit()
+    frappe.msgprint("Item Price updated success", alert=True)
+
+
+def create_item_price(doc):
+    if not doc.customer:
+        return
+
+    # Check if customer is internal
+    is_internal = frappe.db.get_value("Customer", doc.customer, "is_internal_customer")
+
+    if not is_internal:
+        return
+
+    price_list = doc.selling_price_list or "Standard Selling"
+
+    for item in doc.items:
+        update_or_create_item_price(
+            item_code=item.item_code,
+            price_list=price_list,
+            rate=item.rate,
+            currency=doc.currency,
+        )
+
+
+def before_save(doc, method=None):
+    if not allow_update_customer():
+        return
+    create_item_price(doc)
+
+
+def allow_update_customer():
+    selling_settings = frappe.get_single("Selling Settings")
+    if selling_settings.custom_update_item_price_internal_customer:
+        return True
+    return False
