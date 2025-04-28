@@ -45,6 +45,7 @@ doc_events = {
         "on_update_after_submit": "nl_banadir.banadir_customization_reports.controllers.shipping_details.sync_shipping_details",
         "on_cancel": "nl_banadir.banadir_customization_reports.overrides.sales_invoice.on_cancel",
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company",
+        "before_save": "nl_banadir.banadir_customization_reports.utils.utils.before_save",
     },
     "Purchase Invoice": {
         "before_submit": "nl_banadir.banadir_customization_reports.controllers.assign_and_share.purchase_invoice_before_submit",
