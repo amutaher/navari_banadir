@@ -23,7 +23,7 @@ def validate_branch_company(doc, method):
         )
 
 
-def validate_branch_company_item_level(doc):
+def validate_branch_company_item_level(doc, method=None):
     """
     Validates that the branch belongs to the correct company at the item level.
     This applies to multiple doctypes like Sales Invoice, Purchase Invoice, etc.
