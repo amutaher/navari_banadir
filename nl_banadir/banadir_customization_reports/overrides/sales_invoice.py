@@ -79,9 +79,6 @@ def on_cancel(doc, method=None) -> None:
         )
 
 
-# nl_banadir.banadir_customization_reports.overrides.sales_invoice.on_submit
-
-
 def book_sales_partner_commission(doc):
     if doc.sales_partner and doc.commission_amount > 0:
         frappe.log_error("Exectuted")
@@ -93,7 +90,7 @@ def book_sales_partner_commission(doc):
             )
 
             if not accs:
-                frappe.log_error("no account")
+                frappe.log_error("No Sales Partner Accounts found")
                 return
 
             payable_acc = accs[0].payable_account
@@ -101,24 +98,29 @@ def book_sales_partner_commission(doc):
             journal_entry.voucher_type = "Journal Entry"
             journal_entry.company = doc.company
             journal_entry.posting_date = date.today()
-            journal_entry.append(
-                "accounts",
-                {
-                    "account": doc.commission_expense_account,
-                    "credit_in_account_currency": doc.total_commission,
-                },
-            )
+            journal_entry.custom_company_group = doc.company_group
+            journal_entry.sales_invoice = doc.name
             journal_entry.append(
                 "accounts",
                 {
                     "account": payable_acc,
                     "party_type": "Sales Partner",
                     "party": doc.sales_partner,
-                    "debit_in_account_currency": doc.total_commission,
+                    "credit_in_account_currency": doc.total_commission,
+                    "company_group": doc.company_group,
                 },
             )
-            journal_entry.insert()
-            doc.journal_entry = journal_entry.name
+            journal_entry.append(
+                "accounts",
+                {
+                    "account": doc.commission_expense_account,
+                    "debit_in_account_currency": doc.total_commission,
+                    "company_group": doc.company_group,
+                },
+            )
+
+            journal_entry.save()
+            journal_entry.submit()
         except Exception:
             frappe.log_error(
                 "Error while creating Journal Entry", frappe.get_traceback()
