@@ -148,7 +148,7 @@ def on_update(doc, method=None):
             "Work Order Operations Item", operation.get("name")
         )
 
-        # Only consider operations with status "Completed" and invoice_created flag is 0
+        # Only consider operations with status "Completed" and invoice_created flag is zero
         if operation_doc.status == "Completed" and operation_doc.invoice_created == 0:
             if operation_doc.qty_issued <= 0.0:
                 frappe.throw(
