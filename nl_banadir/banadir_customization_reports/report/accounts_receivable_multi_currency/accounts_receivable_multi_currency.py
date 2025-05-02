@@ -54,7 +54,7 @@ class ReceivablePayableReport:
         self.ple = qb.DocType("Payment Ledger Entry")
         self.filters.report_date = getdate(self.filters.report_date or nowdate())
         self.age_as_on = (
-            getdate(nowdate())
+            self.filters.report_date
             if self.filters.report_date > getdate(nowdate())
             else self.filters.report_date
         )
@@ -459,15 +459,6 @@ class ReceivablePayableReport:
         self.set_invoice_details(row)
         self.set_party_details(row)
         self.set_ageing(row)
-
-        # Apply due_date filter
-        if self.filters.get("due_date"):
-            if row.get("due_date"):
-                try:
-                    if getdate(row.get("due_date")) > getdate(self.filters.due_date):
-                        return
-                except Exception as e:
-                    return
 
         if self.filters.get("group_by_party"):
             self.update_sub_total_row(row, row.party)

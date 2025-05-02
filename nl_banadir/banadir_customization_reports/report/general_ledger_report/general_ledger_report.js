@@ -174,6 +174,14 @@ frappe.query_reports["General Ledger Report"] = {
       },
     },
     {
+      fieldname: "precision",
+      label: __("Precision"),
+      fieldtype: "Select",
+      options: "1\n2\n3\n4\n5\n6\n7\n8\n9",
+      default: "2",
+      hidden: 1,
+    },
+    {
       fieldname: "include_dimensions",
       label: __("Consider Accounting Dimensions"),
       fieldtype: "Check",

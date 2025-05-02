@@ -3,6 +3,7 @@ import frappe
 
 from frappe.model.naming import make_autoname
 from frappe import _
+from datetime import datetime
 
 
 def before_save(doc, method=None):
@@ -88,6 +89,7 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
     purchase_invoice.update_stock = 0
     purchase_invoice.custom_work_order = custom_work_order
     purchase_invoice.custom_invoice_no = custom_invoice_no
+    purchase_invoice.buying_price_list = ""
 
     purchase_invoice.append(
         "items",
@@ -101,7 +103,6 @@ def create_purchase_invoice(doc, operation, company, currency, custom_work_order
             else None,
         },
     )
-    # frappe.throw(str(purchase_invoice.items))
 
     purchase_invoice.insert()
     # validate_accounts(purchase_invoice)
@@ -138,8 +139,10 @@ def on_update(doc, method=None):
     """
     Main function to handle the creation of Purchase Invoices for completed operations.
     """
+    validate_invoice_created(doc)
     validate_operations(doc)
     validate_operations_seq(doc)
+    validate_operation_dates(doc)
     for operation in doc.custom_subcontractors:
         operation_doc = frappe.get_doc(
             "Work Order Operations Item", operation.get("name")
@@ -151,11 +154,12 @@ def on_update(doc, method=None):
                 frappe.throw(
                     f"Issued quantity for operation '{operation_doc.operations}' cannot be 0 or less."
                 )
-            if operation_doc.qty_issued > operation_doc.completed_qty:
-                frappe.throw(
-                    f"Issued quantity ({operation_doc.qty_issued}) for operation '{operation_doc.operations}' "
-                    f"cannot exceed the completed quantity ({operation_doc.completed_qty})."
-                )
+                # Uncomment the following lines if you want to restrict the issued quantity
+            # if operation_doc.qty_issued > operation_doc.completed_qty:
+            #     frappe.throw(
+            #         f"Issued quantity ({operation_doc.qty_issued}) for operation '{operation_doc.operations}' "
+            #         f"cannot exceed the completed quantity ({operation_doc.completed_qty})."
+            #     )
 
             create_purchase_invoice(
                 doc=doc,
@@ -194,6 +198,12 @@ def validate_operations(doc):
             operation_doc.status == "In Progress" or operation_doc.status == "Completed"
         ) and operation_doc.supplier is None:
             frappe.throw("Kindly enter the supplier in the Sub-contractor table.")
+        if operation_doc.status == "Completed" and (
+            operation_doc.in_progress_date is None
+        ):
+            frappe.throw(
+                "You cannot complete an operation without having the <b>In Progress Date</b>."
+            )
 
         if operation_doc.status == "Completed" and (
             operation_doc.in_progress_date > operation_doc.completed_date
@@ -335,3 +345,85 @@ def update_is_finished(doc):
         return True
     else:
         return False
+
+
+def validate_invoice_created(doc):
+    """Validate that invoiced rows aren't modified"""
+    set_read_only_for_invoiced_subcontractors(doc)
+
+
+def set_read_only_for_invoiced_subcontractors(doc):
+    """Block modifications only if invoiced rows are changed"""
+    if not doc.get("custom_subcontractors"):
+        return
+
+    doc_before_save = doc.get_doc_before_save()
+
+    if not doc_before_save:
+        return
+
+    old_rows = {
+        row.name: row for row in doc_before_save.get("custom_subcontractors", [])
+    }
+
+    for row in doc.get("custom_subcontractors", []):
+        if not row.get("invoice_created") == 1:
+            continue
+
+        if row.name in old_rows:
+            old_row = old_rows[row.name]
+            for field in ["status", "item", "rate", "supplier"]:
+                if row.get(field) != old_row.get(field):
+                    frappe.throw(
+                        title="Invoice Exists - Modification Blocked",
+                        msg=f"""
+                        Cannot modify operation <strong>{row.get("operations")}</strong>
+                        because an invoice already exists.
+                        <br><br>
+                        Field changed: <strong>{frappe.unscrub(field)}</strong>
+                        """,
+                    )
+
+
+def validate_operation_dates(doc):
+    """
+    Validates that the In Progress Date of an operation is not earlier than
+    the Completed Date of the previous operation in sequence.
+
+    Args:
+        doc: The Work Order document
+        method: The trigger method (not used but required for hooks)
+    """
+    if not doc.custom_subcontractors or len(doc.custom_subcontractors) <= 1:
+        return
+
+    operations = sorted(doc.custom_subcontractors, key=lambda x: x.idx)
+
+    for i in range(1, len(operations)):
+        current_op = operations[i]
+        previous_op = operations[i - 1]
+
+        if not current_op.in_progress_date or not previous_op.completed_date:
+            continue
+
+        current_start_date = datetime.strptime(
+            str(current_op.in_progress_date), "%Y-%m-%d"
+        )
+        previous_end_date = datetime.strptime(
+            str(previous_op.completed_date), "%Y-%m-%d"
+        )
+
+        if current_start_date < previous_end_date:
+            frappe.throw(
+                _(
+                    "Operation <b>{0}</b> cannot start before previous operation <b>{2}</b> is completed. "
+                    "Please ensure the In Progress Date ({4}) is after the Completed Date ({5}) of the previous operation."
+                ).format(
+                    current_op.operations,
+                    current_op.idx,
+                    previous_op.operations,
+                    previous_op.idx,
+                    current_op.in_progress_date,
+                    previous_op.completed_date,
+                )
+            )

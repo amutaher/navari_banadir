@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import frappe
 from frappe import _, _dict
-from frappe.utils import cstr, getdate
+from frappe.utils import cstr, getdate, cint
 
 from erpnext import get_company_currency, get_default_company
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
@@ -644,6 +644,8 @@ def get_columns(filters):
             company = get_default_company()
             currency = get_company_currency(company)
 
+    precision = filters.get("precision", 2)
+
     columns = [
         {
             "label": _("GL Entry"),
@@ -670,6 +672,7 @@ def get_columns(filters):
             "fieldname": "debit",
             "fieldtype": "Currency",
             "options": "currency",
+            "precision": precision,
             "width": 130,
         },
         {
@@ -677,6 +680,7 @@ def get_columns(filters):
             "fieldname": "credit",
             "fieldtype": "Currency",
             "options": "currency",
+            "precision": precision,
             "width": 130,
         },
         {
@@ -684,6 +688,7 @@ def get_columns(filters):
             "fieldname": "balance",
             "fieldtype": "Currency",
             "options": "currency",
+            "precision": precision,
             "width": 130,
         },
         {
@@ -702,6 +707,7 @@ def get_columns(filters):
                 "fieldname": "debit_in_transaction_currency",
                 "fieldtype": "Currency",
                 "options": "currency",
+                "precision": precision,
                 "width": 130,
             },
             {
@@ -709,6 +715,7 @@ def get_columns(filters):
                 "fieldname": "credit_in_transaction_currency",
                 "fieldtype": "Currency",
                 "options": "currency",
+                "precision": precision,
                 "width": 130,
             },
             {

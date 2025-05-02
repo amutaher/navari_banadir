@@ -61,11 +61,6 @@ frappe.query_reports["Accounts Payable MultiCurrency"] = {
       default: "Due Date",
     },
     {
-      fieldname: "due_date",
-      label: __("Due Date"),
-      fieldtype: "Date",
-    },
-    {
       fieldname: "range1",
       label: __("Ageing Range 1"),
       fieldtype: "Int",

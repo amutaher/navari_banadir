@@ -303,7 +303,6 @@ def get_data(filters):
                 exchange_rate, conversion_date = get_conversion_rate(
                     original_currency, selected_currency, date
                 )
-            print(conversion_date)
             if original_currency != selected_currency and exchange_rate < 1:
                 # Display the rate as USD -> CDF, not the inverse
                 row["exchange_rate"] = 1 / exchange_rate
