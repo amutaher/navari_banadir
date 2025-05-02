@@ -99,6 +99,10 @@ def book_sales_partner_commission(doc):
             journal_entry.company = doc.company
             journal_entry.posting_date = date.today()
             journal_entry.custom_company_group = doc.company_group
+            journal_entry.custom_branch = doc.branch
+            journal_entry.custom_cost_center = doc.cost_center
+            journal_entry.custom_marka = doc.marka
+            journal_entry.custom_project = doc.project
             journal_entry.sales_invoice = doc.name
             journal_entry.append(
                 "accounts",
@@ -108,6 +112,10 @@ def book_sales_partner_commission(doc):
                     "party": doc.sales_partner,
                     "credit_in_account_currency": doc.total_commission,
                     "company_group": doc.company_group,
+                    "cost_center": doc.cost_center,
+                    "marka": doc.marka,
+                    "branch": doc.branch,
+                    "project": doc.project,
                 },
             )
             journal_entry.append(
@@ -116,6 +124,10 @@ def book_sales_partner_commission(doc):
                     "account": doc.commission_expense_account,
                     "debit_in_account_currency": doc.total_commission,
                     "company_group": doc.company_group,
+                    "cost_center": doc.cost_center,
+                    "marka": doc.marka,
+                    "branch": doc.branch,
+                    "project": doc.project,
                 },
             )
 
