@@ -23,8 +23,8 @@ frappe.query_reports["Travel Expense"] = {
     {
       fieldname: "type_of_travel",
       label: "Type of Travel",
-      fieldtype: "Select",
-      options: "\nLocal\nInternational",
+      fieldtype: "Link",
+      options: "Expense Claim Type",
     },
     {
       fieldname: "traveller_name",

@@ -1,9 +1,6 @@
 # Copyright (c) 2025, Navari Ltd and contributors
 # For license information, please see license.txt
 
-# import frappe
-
-
 import frappe
 from frappe.utils import getdate
 
@@ -30,8 +27,9 @@ def get_columns():
         },
         {
             "label": "Type of Travel",
-            "fieldname": "type_of_travel",
-            "fieldtype": "Data",
+            "fieldname": "expense_claim_type",
+            "fieldtype": "Link",
+            "options": "Expense Claim Type",
             "width": 120,
         },
         {
@@ -132,7 +130,8 @@ def get_data(filters):
             ecd.custom_departure_airport AS departure_airport,
             ecd.custom_date_of_arrival AS arrival_date,
             ecd.custom_arrival_airport AS arrival_airport,
-            ecd.custom_booked_by AS booked_by
+            ecd.custom_booked_by AS booked_by,
+            ecd.expense_type as expense_claim_type
         FROM
             `tabExpense Claim Detail` ecd
         JOIN
