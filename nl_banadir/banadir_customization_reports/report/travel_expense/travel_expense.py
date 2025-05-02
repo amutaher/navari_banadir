@@ -3,7 +3,6 @@
 
 # import frappe
 
-# travel_expense.py
 
 import frappe
 from frappe.utils import getdate
@@ -48,7 +47,13 @@ def get_columns():
             "options": "Company Group",
             "width": 150,
         },
-        {"label": "Airline", "fieldname": "airline", "fieldtype": "Data", "width": 150},
+        {
+            "label": "Airline",
+            "fieldname": "airline",
+            "fieldtype": "Link",
+            "options": "Airlines",
+            "width": 150,
+        },
         {
             "label": "Departure Date",
             "fieldname": "departure_date",
@@ -58,7 +63,8 @@ def get_columns():
         {
             "label": "Departure Airport",
             "fieldname": "departure_airport",
-            "fieldtype": "Data",
+            "fieldtype": "Link",
+            "options": "Airport",
             "width": 150,
         },
         {
@@ -70,7 +76,8 @@ def get_columns():
         {
             "label": "Arrival Airport",
             "fieldname": "arrival_airport",
-            "fieldtype": "Data",
+            "fieldtype": "Link",
+            "options": "Airport",
             "width": 150,
         },
         {
