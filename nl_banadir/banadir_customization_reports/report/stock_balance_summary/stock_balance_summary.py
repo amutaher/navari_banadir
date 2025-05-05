@@ -35,6 +35,7 @@ class StockBalanceFilter(TypedDict):
     remove_precision: bool
     show_warehouse_totals: bool
     eliminate_zero_values: bool
+    sales_and_purchase_only: bool
 
 
 SLEntry = dict[str, Any]
@@ -366,6 +367,16 @@ class StockBalanceReport:
             .orderby(sle.creation)
             .orderby(sle.actual_qty)
         )
+
+        # Apply sales and purchase filter if enabled
+        if self.filters.get("sales_and_purchase_only"):
+            allowed_voucher_types = [
+                "Sales Invoice",
+                "Delivery Note",
+                "Purchase Invoice",
+                "Purchase Receipt"
+            ]
+            query = query.where(sle.voucher_type.isin(allowed_voucher_types))
 
         query = self.apply_inventory_dimensions_filters(query, sle)
         query = self.apply_warehouse_filters(query, sle)
