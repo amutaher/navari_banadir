@@ -4,6 +4,15 @@
 frappe.query_reports["Travel Expense"] = {
   filters: [
     {
+      fieldname: "company",
+      label: "Company",
+      fieldtype: "Link",
+      options: "Company",
+      default: frappe.defaults.get_user_default("Company"),
+      reqd: 1,
+    },
+
+    {
       fieldname: "company_group",
       label: "Company Group",
       fieldtype: "Link",
