@@ -27,9 +27,9 @@ def get_columns():
         },
         {
             "label": "Type of Travel",
-            "fieldname": "expense_claim_type",
-            "fieldtype": "Link",
-            "options": "Expense Claim Type",
+            "fieldname": "type_of_travel",
+            "fieldtype": "Select",
+            "options": "\nOne Way\nReturn",
             "width": 120,
         },
         {
@@ -136,7 +136,8 @@ def get_data(filters):
             ecd.custom_date_of_arrival AS arrival_date,
             ecd.custom_arrival_airport AS arrival_airport,
             ecd.custom_booked_by AS booked_by,
-            ecd.expense_type as expense_claim_type
+            ecd.expense_type as expense_claim_type,
+            ecd.custom_travel_type as travel_type
         FROM
             `tabExpense Claim Detail` ecd
         JOIN
