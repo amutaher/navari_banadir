@@ -92,6 +92,10 @@ def get_data(filters):
     conditions = []
     values = {}
 
+    if filters.get("company"):
+        conditions.append("ec.company = %(company)s")
+        values["company"] = filters["company"]
+
     if filters.get("company_group"):
         conditions.append("ecd.company_group = %(company_group)s")
         values["company_group"] = filters["company_group"]
@@ -121,6 +125,7 @@ def get_data(filters):
     query = f"""
         SELECT
             ec.posting_date AS booking_date,
+            ec.company AS company,
             ec.custom_traveller_name AS traveller_name,
             ec.custom_travel_group AS type_of_travel,
             ecd.amount AS amount,
