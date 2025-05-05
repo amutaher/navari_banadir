@@ -3,15 +3,20 @@
 
 import frappe
 from frappe.utils import getdate
+from frappe import _
 
 
 def execute(filters=None):
-    columns = get_columns()
+    currency = frappe.get_cached_value(
+        "Company", filters.get("company"), "default_currency"
+    )
+    columns = get_columns(currency)
+
     data = get_data(filters)
     return columns, data
 
 
-def get_columns():
+def get_columns(currency=None):
     return [
         {
             "label": "Date of Booking",
@@ -36,7 +41,15 @@ def get_columns():
             "label": "Amount",
             "fieldname": "amount",
             "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
+        },
+        {
+            "label": " Amount(USD)",
+            "fieldname": "amount_usd",
+            "fieldtype": "Currency",
+            "width": 100,
+            "options": "USD",
         },
         {
             "label": "Company Group",
@@ -84,6 +97,14 @@ def get_columns():
             "fieldtype": "Link",
             "options": "User",
             "width": 150,
+        },
+        {
+            "label": "Currency",
+            "fieldname": "currency",
+            "fieldtype": "Link",
+            "options": "Currency",
+            "width": 100,
+            "hidden": 1,
         },
     ]
 
@@ -145,4 +166,67 @@ def get_data(filters):
         {condition_str}
         ORDER BY ec.posting_date DESC
     """
-    return frappe.db.sql(query, values, as_dict=True)
+
+    raw_data = frappe.db.sql(query, values, as_dict=True)
+    company_currency = frappe.get_cached_value(
+        "Company", filters.get("company"), "default_currency"
+    )
+
+    # Convert amounts to USD
+    for row in raw_data:
+        amount_kes = row["amount"] or 0
+        date = row["booking_date"] or frappe.utils.nowdate()
+        row["currency"] = company_currency
+        row["amount_usd"] = convert_currency(amount_kes, company_currency, "USD", date)
+    return raw_data
+
+
+def convert_currency(amount, from_currency, to_currency, date):
+    conversion_rate, conversion_date = get_conversion_rate(
+        from_currency, to_currency, date
+    )
+    return amount * conversion_rate
+
+
+def get_conversion_rate(from_currency, to_currency, date):
+    if from_currency == to_currency:
+        return 1, None
+
+    conversion_rate = frappe.get_all(
+        "Currency Exchange",
+        filters={
+            "from_currency": from_currency,
+            "to_currency": to_currency,
+            "date": ["<=", date],
+        },
+        fields=["exchange_rate", "date"],
+        order_by="date desc",
+        limit=1,
+    )
+
+    if conversion_rate:
+        return conversion_rate[0]["exchange_rate"], conversion_rate[0]["date"]
+    else:
+        # Try fetching the inverse exchange rate
+        inverse_conversion_rate = frappe.get_all(
+            "Currency Exchange",
+            filters={
+                "from_currency": to_currency,
+                "to_currency": from_currency,
+                "date": ["<=", date],
+            },
+            fields=["exchange_rate", "date"],
+            order_by="date desc",
+            limit=1,
+        )
+
+        if inverse_conversion_rate:
+            inverse_exchange_rate = inverse_conversion_rate[0]["exchange_rate"]
+            return 1 / inverse_exchange_rate, inverse_conversion_rate[0]["date"]
+        else:
+            frappe.msgprint(
+                _("Exchange rate not found for {0} to {1}").format(
+                    from_currency, to_currency
+                )
+            )
+            return 1, None
