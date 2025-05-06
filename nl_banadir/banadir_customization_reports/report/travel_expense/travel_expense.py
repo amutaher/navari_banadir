@@ -7,16 +7,13 @@ from frappe import _
 
 
 def execute(filters=None):
-    currency = frappe.get_cached_value(
-        "Company", filters.get("company"), "default_currency"
-    )
-    columns = get_columns(currency)
+    columns = get_columns()
 
     data = get_data(filters)
     return columns, data
 
 
-def get_columns(currency=None):
+def get_columns():
     return [
         {
             "label": "Date of Booking",

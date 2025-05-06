@@ -58,7 +58,7 @@ frappe.query_reports["Planning Process Manufacturing"] = {
       default: 1,
     },
     {
-      label: __("Hide Fields"),
+      label: __("Cutting Details"),
       fieldname: "hide_fields",
       fieldtype: "Check",
       default: 0,
