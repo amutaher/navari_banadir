@@ -268,9 +268,17 @@ class StockBalanceReport:
             if flt(qty_diff, self.float_precision) >= 0:
                 qty_dict.in_qty += qty_diff
                 qty_dict.in_val += value_diff
+
+                # Track purchase inflow
+                if entry.voucher_type in ["Purchase Invoice", "Purchase Receipt"]:
+                    qty_dict.in_qty_purchase += qty_diff
             else:
                 qty_dict.out_qty += abs(qty_diff)
                 qty_dict.out_val += abs(value_diff)
+
+                # Track sales inflow
+                if entry.voucher_type in ["Sales Invoice", "Delivery Note"]:
+                    qty_dict.out_qty_sales += abs(qty_diff)
 
         qty_dict.val_rate = entry.valuation_rate
         qty_dict.bal_qty += qty_diff
@@ -295,6 +303,8 @@ class StockBalanceReport:
                 "in_val": 0.0,
                 "out_qty": 0.0,
                 "out_val": 0.0,
+                "in_qty_purchase": 0.0,
+                "out_qty_sales": 0.0,
                 "bal_qty": opening_data.get("bal_qty") or 0.0,
                 "bal_val": opening_data.get("bal_val") or 0.0,
                 "val_rate": 0.0,
@@ -369,16 +379,6 @@ class StockBalanceReport:
             .orderby(sle.creation)
             .orderby(sle.actual_qty)
         )
-
-        # Apply sales and purchase filter if enabled
-        if self.filters.get("sales_and_purchase_only"):
-            allowed_voucher_types = [
-                "Sales Invoice",
-                "Delivery Note",
-                "Purchase Invoice",
-                "Purchase Receipt"
-            ]
-            query = query.where(sle.voucher_type.isin(allowed_voucher_types))
 
         query = self.apply_inventory_dimensions_filters(query, sle)
         query = self.apply_warehouse_filters(query, sle)
@@ -581,6 +581,16 @@ class StockBalanceReport:
                     "hidden": 0 if self.filters.get("show_in_out_qty") else 1,
                 },
                 {
+                    "label": _("In Qty (Purchase)"),
+                    "fieldname": "in_qty_purchase",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "width": 150,
+                    "convertible": "qty",
+                    "hidden": 0 if self.filters.get("sales_and_purchase_only") else 1,
+                },
+                {
                     "label": _("In Value"),
                     "fieldname": "in_val",
                     "fieldtype": "Float",
@@ -596,6 +606,16 @@ class StockBalanceReport:
                     "width": 80,
                     "convertible": "qty",
                     "hidden": 0 if self.filters.get("show_in_out_qty") else 1,
+                },
+                {
+                    "label": _("Out Qty (Sales)"),
+                    "fieldname": "out_qty_sales",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "width": 150,
+                    "convertible": "qty",
+                    "hidden": 0 if self.filters.get("sales_and_purchase_only") else 1,
                 },
                 {
                     "label": _("Out Value"),
