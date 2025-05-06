@@ -27,14 +27,6 @@ from erpnext.accounts.report.utils import convert_to_presentation_currency, get_
 from erpnext.accounts.utils import get_fiscal_year
 
 
-# from erpnext.accounts.report.financial_statements import (
-# 	get_columns,
-# 	get_data,
-# 	get_filtered_list_for_consolidated_report,
-# 	get_period_list,
-# )
-
-
 def execute(filters=None):
     period_list = get_period_list(
         filters.from_fiscal_year,
@@ -81,7 +73,6 @@ def execute(filters=None):
     columns = get_columns(
         filters.periodicity, period_list, filters.accumulated_values, filters.company
     )
-
     chart = get_chart_data(filters, columns, income, expense, net_profit_loss)
 
     currency = filters.presentation_currency or frappe.get_cached_value(
@@ -327,21 +318,8 @@ def get_period_list(
                 "year_end_date": year_end_date,
             }
         )
-    # frappe.throw(str(opts))
-    # frappe.throw(str(period_list))
+
     return period_list
-
-
-# def get_fiscal_year_data(from_fiscal_year, to_fiscal_year):
-# 	fiscal_year = frappe.db.sql(
-# 		"""select min(year_start_date) as year_start_date,
-# 		max(year_end_date) as year_end_date from `tabFiscal Year` where
-# 		name between %(from_fiscal_year)s and %(to_fiscal_year)s""",
-# 		{"from_fiscal_year": from_fiscal_year, "to_fiscal_year": to_fiscal_year},
-# 		as_dict=1,
-# 	)
-
-# 	return fiscal_year[0] if fiscal_year else {}
 
 
 def get_fiscal_year_data(from_fiscal_year, to_fiscal_year):
@@ -376,7 +354,6 @@ def get_fiscal_year_data(from_fiscal_year, to_fiscal_year):
         },
         as_dict=1,
     )
-    # frappe.throw(str(fiscal_year))
     return fiscal_year[0] if fiscal_year else {}
 
 
@@ -414,8 +391,7 @@ def get_label(periodicity, from_date, to_date):
                 "name",
             )
             label = fiscal_year if fiscal_year else formatdate(from_date, "YYYY")
-        # else:
-        # 	label = formatdate(from_date, "YYYY")
+
         else:
             label = formatdate(from_date, "YYYY") + "-" + formatdate(to_date, "YYYY")
     else:
@@ -480,7 +456,6 @@ def get_data(
 
     if out and total:
         add_total_row(out, root_type, balance_must_be, period_list, company_currency)
-    # frappe.throw(str(out))
     return out
 
 
