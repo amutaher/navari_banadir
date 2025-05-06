@@ -236,15 +236,13 @@ def _execute(filters=None, additional_table_columns=None):
             )
 
         data.append(row)
-    # frappe.throw(str(data))
+
     if filters.get("group_by") and item_list:
         total_row = total_row_map.get(prev_group_by_value or d.get("item_name"))
         total_row["percent_gt"] = flt(total_row["total"] / grand_total * 100)
-        # total_row[""]
         data.append(total_row)
         data.append({})
         add_sub_total_row(total_row, total_row_map, "total_row", tax_columns)
-        # data.append(total_row_map.get("total_row"))
         skip_total_row = 1
 
     data = append_opening_qty(data, filters)
@@ -273,7 +271,6 @@ def get_columns(additional_table_columns, filters):
                     "fieldtype": "Link",
                     "options": "Item",
                     "width": 120,
-                    # "hidden": 1 if filters.get("hide_column") else 0,
                 },
                 {
                     "label": _("Currency"),
@@ -647,6 +644,7 @@ def get_items(filters, additional_table_columns):
 
 
 def get_aii_accounts():
+    frappe.throw("here")
     return dict(
         frappe.db.sql("select name, stock_received_but_not_billed from tabCompany")
     )
