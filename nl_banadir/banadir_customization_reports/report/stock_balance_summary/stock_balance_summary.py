@@ -87,7 +87,9 @@ class StockBalanceReport:
         if self.filters.get("eliminate_zero_values"):
             updated_data = []
             for entry in self.data:
-                if entry.get("bal_qty") > 0:
+                if entry.get("is_total"):
+                    updated_data.append(entry)
+                elif entry.get("bal_qty") > 0:
                     updated_data.append(entry)
 
             self.data = updated_data
@@ -441,21 +443,25 @@ class StockBalanceReport:
         return query
 
     def get_warehouse_totals(self, data):
-        grouped_data = defaultdict(lambda: {"bal_qty": 0.0, "bal_qty_alt": 0.0})
+        grouped_data = defaultdict(lambda: {"bal_qty": 0.0, "bal_qty_alt": 0.0, "warehouse_total_qty": 0.0, "warehouse_total_qty_alt": 0.0})
+
+        # frappe.throw(str(grouped_data))
 
         for entry in data:
             key = entry["warehouse"]
             if self.filters.get("include_uom"):
                 grouped_data[key]["bal_qty_alt"] += entry["bal_qty_alt"]
+                grouped_data[key]["warehouse_total_qty_alt"] += entry["bal_qty_alt"]
             grouped_data[key]["bal_qty"] += entry["bal_qty"]
+            grouped_data[key]["warehouse_total_qty"] += entry["bal_qty"]
 
         result = [
             {
                 "item_code": f"Total - {key}",
                 "warehouse": f"Total - {key}",
-                "bal_qty": value["bal_qty"],
-                "bal_qty_alt": (
-                    value["bal_qty_alt"] if value.get("bal_qty_alt") else 0.0
+                "warehouse_total_qty": value["warehouse_total_qty"],
+                "warehouse_total_qty_alt": (
+                    value["warehouse_total_qty_alt"] if value.get("warehouse_total_qty_alt") else 0.0
                 ),
                 "is_total": True,
             }
@@ -642,6 +648,17 @@ class StockBalanceReport:
                 {"label": att_name, "fieldname": att_name, "width": 100}
                 for att_name in get_variants_attributes()
             ]
+
+        if self.filters.get("show_warehouse_totals"):
+            columns.append({
+                "label": _("Warehouse Total Qty"),
+                "fieldname": "warehouse_total_qty",
+                "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                "width": 150,
+                "convertible": "qty"
+            })
 
         return columns
 
