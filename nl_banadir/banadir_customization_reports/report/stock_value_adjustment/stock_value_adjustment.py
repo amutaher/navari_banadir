@@ -10,7 +10,6 @@ import erpnext
 from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register import (
     add_sub_total_row,
     add_total_row,
-    apply_order_by_conditions,
     get_grand_total,
     get_group_by_and_display_fields,
 )
@@ -19,6 +18,8 @@ from erpnext.accounts.report.utils import (
     convert,
     get_rate_as_at,
 )
+
+from pypika.terms import Term
 
 
 def get_current_exchange_rate(from_currency, to_currency, date):
@@ -129,11 +130,11 @@ def _execute(filters=None, additional_table_columns=None):
     columns = get_columns(additional_table_columns, filters)
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters, additional_table_columns)
+
     aii_account_map = get_aii_accounts()
     presentation_currency = filters.get(
         "presentation_currency"
     ) or frappe.get_cached_value("Company", filters.company, "default_currency")
-    # frappe.throw(str(presentation_currency))
     po_pr_map = get_purchase_receipts_against_purchase_order(item_list)
     scrubbed_tax_fields = {}
     data = []
@@ -145,7 +146,6 @@ def _execute(filters=None, additional_table_columns=None):
 
     if filters.get("group_by"):
         grand_total = get_grand_total(filters, "Purchase Invoice")
-
     for d in item_list:
         purchase_receipt = None
         if d.purchase_receipt:
@@ -553,6 +553,27 @@ def get_columns(additional_table_columns, filters):
     return columns
 
 
+def apply_order_by_condition(query, si, ii, filters):
+    if not filters.get("group_by"):
+        query = query.orderby(si.posting_date, order=Order.desc)
+        query = query.orderby(ii.item_group, order=Order.desc)
+    elif filters.get("group_by") == "Invoice":
+        query = query.orderby(ii.parent, order=Order.desc)
+    elif filters.get("group_by") == "Item":
+        query = query.orderby(ii.item_code)
+    elif filters.get("group_by") == "Item Group":
+        query = query.orderby(ii.item_group)
+    elif filters.get("group_by") in (
+        "Customer",
+        "Customer Group",
+        "Territory",
+        "Supplier",
+    ):
+        field_name = frappe.scrub(filters.get("group_by"))
+        query = query.orderby(Term(field_name), order=Order.desc)
+    return query
+
+
 def apply_conditions(query, pi, pii, filters):
     for opts in ("company", "supplier", "mode_of_payment"):
         if filters.get(opts):
@@ -574,7 +595,7 @@ def apply_conditions(query, pi, pii, filters):
         query = query.orderby(pi.posting_date, order=Order.desc)
         query = query.orderby(pii.item_group, order=Order.desc)
     else:
-        query = apply_order_by_conditions(query, pi, pii, filters)
+        query = apply_order_by_condition(query, pi, pii, filters)
 
     return query
 
@@ -644,7 +665,6 @@ def get_items(filters, additional_table_columns):
 
 
 def get_aii_accounts():
-    frappe.throw("here")
     return dict(
         frappe.db.sql("select name, stock_received_but_not_billed from tabCompany")
     )
