@@ -36,6 +36,7 @@ def get_columns(filters):
             "fieldname": "status",
             "fieldtype": "Data",
             "width": 100,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Finished Goods Work Order No",
@@ -43,12 +44,14 @@ def get_columns(filters):
             "fieldtype": "Link",
             "options": "Work Order",
             "width": 200,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "FG Status",
             "fieldname": "fg_status",
             "fieldtype": "Data",
             "width": 100,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Insole Work Order",
@@ -62,6 +65,7 @@ def get_columns(filters):
             "fieldname": "i_status",
             "fieldtype": "Data",
             "width": 100,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Sequence No (Finished Goods)",
@@ -75,6 +79,7 @@ def get_columns(filters):
             "fieldtype": "Link",
             "options": "Item",
             "width": 200,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Item Name (Insole)",
@@ -89,6 +94,7 @@ def get_columns(filters):
             "fieldtype": "Link",
             "options": "Item",
             "width": 200,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Order/Pairs",
@@ -176,6 +182,7 @@ def get_columns(filters):
             "fieldname": "issued_date",
             "fieldtype": "Date",
             "width": 150,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Subcontractor Name",
@@ -183,66 +190,77 @@ def get_columns(filters):
             "fieldtype": "Link",
             "options": "Supplier",
             "width": 150,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Quantity Issued",
             "fieldname": "quantity_issued",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Received Quantity",
             "fieldname": "received_quantity",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Balance Quantity",
             "fieldname": "balance_quantity",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Upper Stock",
             "fieldname": "upper_stock",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Qty Issued(Machine)",
             "fieldname": "qty_issued_machine",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Fresh Qty",
             "fieldname": "fresh_qty_issued",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "B Qty",
             "fieldname": "b_qty_issued",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Rejected Qty",
             "fieldname": "rejected_qty_issued",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Odd Qty",
             "fieldname": "odd_qty",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Balance(In Machine)",
             "fieldname": "balance_to_issue",
             "fieldtype": int_or_float(filters),
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
         {
             "label": "Stock Entry",
@@ -250,6 +268,7 @@ def get_columns(filters):
             "fieldtype": "Link",
             "options": "Stock Entry",
             "width": 120,
+            "hidden": 1 if filters.get("hide_fields") else 0,
         },
     ]
 

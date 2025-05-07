@@ -35,6 +35,7 @@ class StockBalanceFilter(TypedDict):
     remove_precision: bool
     show_warehouse_totals: bool
     eliminate_zero_values: bool
+    sales_and_purchase_only: bool
 
 
 SLEntry = dict[str, Any]
@@ -86,7 +87,9 @@ class StockBalanceReport:
         if self.filters.get("eliminate_zero_values"):
             updated_data = []
             for entry in self.data:
-                if entry.get("bal_qty") > 0:
+                if entry.get("is_total"):
+                    updated_data.append(entry)
+                elif entry.get("bal_qty") > 0:
                     updated_data.append(entry)
 
             self.data = updated_data
@@ -265,9 +268,17 @@ class StockBalanceReport:
             if flt(qty_diff, self.float_precision) >= 0:
                 qty_dict.in_qty += qty_diff
                 qty_dict.in_val += value_diff
+
+                # Track purchase inflow
+                if entry.voucher_type in ["Purchase Invoice", "Purchase Receipt"]:
+                    qty_dict.in_qty_purchase += qty_diff
             else:
                 qty_dict.out_qty += abs(qty_diff)
                 qty_dict.out_val += abs(value_diff)
+
+                # Track sales inflow
+                if entry.voucher_type in ["Sales Invoice", "Delivery Note"]:
+                    qty_dict.out_qty_sales += abs(qty_diff)
 
         qty_dict.val_rate = entry.valuation_rate
         qty_dict.bal_qty += qty_diff
@@ -292,6 +303,8 @@ class StockBalanceReport:
                 "in_val": 0.0,
                 "out_qty": 0.0,
                 "out_val": 0.0,
+                "in_qty_purchase": 0.0,
+                "out_qty_sales": 0.0,
                 "bal_qty": opening_data.get("bal_qty") or 0.0,
                 "bal_val": opening_data.get("bal_val") or 0.0,
                 "val_rate": 0.0,
@@ -430,21 +443,25 @@ class StockBalanceReport:
         return query
 
     def get_warehouse_totals(self, data):
-        grouped_data = defaultdict(lambda: {"bal_qty": 0.0, "bal_qty_alt": 0.0})
+        grouped_data = defaultdict(lambda: {"bal_qty": 0.0, "bal_qty_alt": 0.0, "warehouse_total_qty": 0.0, "warehouse_total_qty_alt": 0.0})
+
+        # frappe.throw(str(grouped_data))
 
         for entry in data:
             key = entry["warehouse"]
             if self.filters.get("include_uom"):
                 grouped_data[key]["bal_qty_alt"] += entry["bal_qty_alt"]
+                grouped_data[key]["warehouse_total_qty_alt"] += entry["bal_qty_alt"]
             grouped_data[key]["bal_qty"] += entry["bal_qty"]
+            grouped_data[key]["warehouse_total_qty"] += entry["bal_qty"]
 
         result = [
             {
                 "item_code": f"Total - {key}",
                 "warehouse": f"Total - {key}",
-                "bal_qty": value["bal_qty"],
-                "bal_qty_alt": (
-                    value["bal_qty_alt"] if value.get("bal_qty_alt") else 0.0
+                "warehouse_total_qty": value["warehouse_total_qty"],
+                "warehouse_total_qty_alt": (
+                    value["warehouse_total_qty_alt"] if value.get("warehouse_total_qty_alt") else 0.0
                 ),
                 "is_total": True,
             }
@@ -498,17 +515,18 @@ class StockBalanceReport:
             },
         ]
 
-        for dimension in get_inventory_dimensions():
-            columns.append(
-                {
-                    "label": _(dimension.doctype),
-                    "fieldname": dimension.fieldname,
-                    "fieldtype": "Link",
-                    "options": dimension.doctype,
-                    "width": 110,
-                    "hidden": 1,
-                }
-            )
+        if self.filters.get("show_dimension_wise_stock"):
+            for dimension in get_inventory_dimensions():
+                columns.append(
+                    {
+                        "label": _(dimension.doctype),
+                        "fieldname": dimension.fieldname,
+                        "fieldtype": "Link",
+                        "options": dimension.doctype,
+                        "width": 110,
+                        "hidden": 1,
+                    }
+                )
 
         columns.extend(
             [
@@ -563,6 +581,16 @@ class StockBalanceReport:
                     "hidden": 0 if self.filters.get("show_in_out_qty") else 1,
                 },
                 {
+                    "label": _("In Qty (Purchase)"),
+                    "fieldname": "in_qty_purchase",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "width": 150,
+                    "convertible": "qty",
+                    "hidden": 0 if self.filters.get("sales_and_purchase_only") else 1,
+                },
+                {
                     "label": _("In Value"),
                     "fieldname": "in_val",
                     "fieldtype": "Float",
@@ -578,6 +606,16 @@ class StockBalanceReport:
                     "width": 80,
                     "convertible": "qty",
                     "hidden": 0 if self.filters.get("show_in_out_qty") else 1,
+                },
+                {
+                    "label": _("Out Qty (Sales)"),
+                    "fieldname": "out_qty_sales",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "width": 150,
+                    "convertible": "qty",
+                    "hidden": 0 if self.filters.get("sales_and_purchase_only") else 1,
                 },
                 {
                     "label": _("Out Value"),
@@ -630,6 +668,17 @@ class StockBalanceReport:
                 {"label": att_name, "fieldname": att_name, "width": 100}
                 for att_name in get_variants_attributes()
             ]
+
+        if self.filters.get("show_warehouse_totals"):
+            columns.append({
+                "label": _("Warehouse Total Qty"),
+                "fieldname": "warehouse_total_qty",
+                "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                "width": 150,
+                "convertible": "qty"
+            })
 
         return columns
 
