@@ -196,7 +196,6 @@ def execute(filters=None):
         data = update_quantity_with_uom_conversion(data, filters)
     if filters.get("alternative_uom") and filters.group_by != "Customer":
         data = convert_alternative_uom(data, filters)
-        print(str(data))
     return columns, data
 
 
@@ -1259,9 +1258,9 @@ def get_currency_fields(group_by):
         elif group_by == "Project":
             currency_indices = range(1, 4)
         elif group_by == "Branch":
-            currency_indices = range(2, 7)
+            currency_indices = range(2, 5)
         elif group_by == "Marka":
-            currency_indices = range(2, 7)
+            currency_indices = range(2, 5)
 
     return currency_fields, currency_indices
 
