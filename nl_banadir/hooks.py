@@ -35,6 +35,12 @@ fixtures = [
                     "Selling Settings-custom_update_item_price_internal_customer",
                     "Expense Claim Detail-custom_reference",
                     "Expense Claim Detail-custom_voucher_no",
+                    "Sales Invoice-custom_commission_amount",
+                    "Sales Invoice-custom_commission_expense_account",
+                    "Sales Partner-custom_sales_partner_accounts",
+                    "Sales Partner-custom_section_break_hybkd",
+                    "Sales Partner-custom_commission_rate_amount",
+
                 ),
             ]
         ],
@@ -135,6 +141,7 @@ doctype_js = {
     "Purchase Order": "public/js/purchase_order.js",
     "Production Plan": "public/js/production_plan.js",
     "Sales Order": "public/js/sales_order.js",
+    "Sales Invoice": "public/js/sales_invoice.js",
     "Payment Entry": "public/js/payment_entry.js",
     "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",
     "Stock Entry": "public/js/stock_entry.js",
