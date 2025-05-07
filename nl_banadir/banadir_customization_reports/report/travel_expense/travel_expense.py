@@ -103,6 +103,12 @@ def get_columns():
             "width": 150,
         },
         {
+            "label": "Voucher No",
+            "fieldname": "voucher_no",
+            "fieldtype": "Data",
+            "width": 150,
+        },
+        {
             "label": "Currency",
             "fieldname": "currency",
             "fieldtype": "Link",
@@ -163,7 +169,8 @@ def get_data(filters):
             ecd.custom_arrival_airport AS arrival_airport,
             ecd.custom_booked_by AS booked_by,
             ecd.expense_type as expense_claim_type,
-            ecd.custom_travel_type as travel_type
+            ecd.custom_travel_type as travel_type,
+            ecd.custom_voucher_no as voucher_no
         FROM
             `tabExpense Claim Detail` ecd
         JOIN
