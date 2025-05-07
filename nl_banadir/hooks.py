@@ -33,12 +33,14 @@ fixtures = [
                     "Journal Entry-custom_cost_center",
                     "Journal Entry-custom_project",
                     "Selling Settings-custom_update_item_price_internal_customer",
+                    "Expense Claim Detail-custom_reference",
+                    "Expense Claim Detail-custom_voucher_no",
                     "Sales Invoice-custom_commission_amount",
                     "Sales Invoice-custom_commission_expense_account",
                     "Sales Partner-custom_sales_partner_accounts",
                     "Sales Partner-custom_section_break_hybkd",
                     "Sales Partner-custom_commission_rate_amount",
-                    "Journal Entry-custom_sales_invoice",
+
                 ),
             ]
         ],

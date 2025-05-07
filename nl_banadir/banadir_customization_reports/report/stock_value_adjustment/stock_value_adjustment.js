@@ -59,7 +59,7 @@ frappe.query_reports["Stock Value Adjustment"] = {
       label: __("Group By"),
       fieldname: "group_by",
       fieldtype: "Select",
-      options: ["", "Supplier", "Item Group", "Item", "Invoice"],
+      options: ["", "Item Group", "Item", "Invoice"],
     },
     {
       fieldname: "presentation_currency",

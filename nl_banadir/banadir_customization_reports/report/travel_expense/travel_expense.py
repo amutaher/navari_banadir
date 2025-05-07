@@ -16,6 +16,13 @@ def execute(filters=None):
 def get_columns():
     return [
         {
+            "label": "Expense Claim",
+            "fieldname": "expense_claim",
+            "fieldtype": "Link",
+            "options": "Expense Claim",
+            "width": 150,
+        },
+        {
             "label": "Date of Booking",
             "fieldname": "booking_date",
             "fieldtype": "Date",
@@ -29,7 +36,7 @@ def get_columns():
         },
         {
             "label": "Type of Travel",
-            "fieldname": "type_of_travel",
+            "fieldname": "travel_type",
             "fieldtype": "Select",
             "options": "\nOne Way\nReturn",
             "width": 120,
@@ -96,6 +103,12 @@ def get_columns():
             "width": 150,
         },
         {
+            "label": "Voucher No",
+            "fieldname": "voucher_no",
+            "fieldtype": "Data",
+            "width": 150,
+        },
+        {
             "label": "Currency",
             "fieldname": "currency",
             "fieldtype": "Link",
@@ -126,9 +139,9 @@ def get_data(filters):
         conditions.append("ec.custom_traveller_name = %(traveller_name)s")
         values["traveller_name"] = filters["traveller_name"]
 
-    if filters.get("type_of_travel"):
-        conditions.append("ec.custom_travel_group = %(type_of_travel)s")
-        values["type_of_travel"] = filters["type_of_travel"]
+    if filters.get("travel_type"):
+        conditions.append("ecd.custom_travel_type = %(travel_type)s")
+        values["travel_type"] = filters["travel_type"]
 
     if filters.get("booking_date"):
         from_date, to_date = filters["booking_date"]
@@ -142,6 +155,7 @@ def get_data(filters):
 
     query = f"""
         SELECT
+            ec.name AS expense_claim,
             ec.posting_date AS booking_date,
             ec.company AS company,
             ec.custom_traveller_name AS traveller_name,
@@ -155,7 +169,8 @@ def get_data(filters):
             ecd.custom_arrival_airport AS arrival_airport,
             ecd.custom_booked_by AS booked_by,
             ecd.expense_type as expense_claim_type,
-            ecd.custom_travel_type as travel_type
+            ecd.custom_travel_type as travel_type,
+            ecd.custom_voucher_no as voucher_no
         FROM
             `tabExpense Claim Detail` ecd
         JOIN
