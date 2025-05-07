@@ -33,6 +33,8 @@ fixtures = [
                     "Journal Entry-custom_cost_center",
                     "Journal Entry-custom_project",
                     "Selling Settings-custom_update_item_price_internal_customer",
+                    "Expense Claim Detail-custom_reference",
+                    "Expense Claim Detail-custom_voucher_no",
                 ),
             ]
         ],
