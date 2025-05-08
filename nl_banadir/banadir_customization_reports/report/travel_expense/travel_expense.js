@@ -31,7 +31,7 @@ frappe.query_reports["Travel Expense"] = {
       fieldtype: "DateRange",
     },
     {
-      fieldname: "type_of_travel",
+      fieldname: "travel_type",
       label: "Type of Travel",
       fieldtype: "Select",
       options: "\nOne Way\nReturn",
@@ -40,7 +40,7 @@ frappe.query_reports["Travel Expense"] = {
       fieldname: "traveller_name",
       label: "Traveller Name",
       fieldtype: "Link",
-      options: "User",
+      options: "Traveller",
     },
   ],
 };
