@@ -156,7 +156,7 @@ def get_data(filters):
     query = f"""
         SELECT
             ec.name AS expense_claim,
-            ec.posting_date AS booking_date,
+            ec.expense_date AS booking_date,
             ec.company AS company,
             ec.custom_traveller_name AS traveller_name,
             ec.custom_travel_group AS type_of_travel,
