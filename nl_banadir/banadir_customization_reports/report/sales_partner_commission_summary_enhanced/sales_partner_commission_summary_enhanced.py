@@ -109,9 +109,7 @@ def get_entries(filters):
 		WHERE
 			{} and docstatus = 1 and sales_partner is not null
 			and sales_partner != '' order by name desc, sales_partner
-		""".format(
-            date_field, filters.get("doctype"), conditions
-        ),
+		""".format(date_field, filters.get("doctype"), conditions),
         filters,
         as_dict=1,
     )

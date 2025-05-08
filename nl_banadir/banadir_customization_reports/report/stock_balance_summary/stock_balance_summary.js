@@ -138,7 +138,7 @@ frappe.query_reports["Stock Balance Summary"] = {
       label: __("Sales/Purchases Only"),
       fieldtype: "Check",
       default: 0,
-    }
+    },
   ],
 
   formatter: function (value, row, column, data, default_formatter) {
