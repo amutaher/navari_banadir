@@ -128,7 +128,7 @@ def get_data(filters):
         values["company"] = filters["company"]
 
     if filters.get("company_group"):
-        conditions.append("ecd.company_group = %(company_group)s")
+        conditions.append("ec.company_group = %(company_group)s")
         values["company_group"] = filters["company_group"]
 
     if filters.get("booked_by"):
@@ -161,7 +161,7 @@ def get_data(filters):
             ec.custom_traveller_name AS traveller_name,
             ec.custom_travel_group AS type_of_travel,
             ecd.amount AS amount,
-            ecd.company_group AS company_group,
+            ec.company_group AS company_group,
             ecd.custom_airlines AS airline,
             ecd.custom_date_of_travel AS departure_date,
             ecd.custom_departure_airport AS departure_airport,
