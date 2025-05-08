@@ -17,7 +17,6 @@ frappe.query_reports["Travel Expense"] = {
       label: "Company Group",
       fieldtype: "Link",
       options: "Company Group",
-      reqd: 1,
     },
     {
       fieldname: "booked_by",
