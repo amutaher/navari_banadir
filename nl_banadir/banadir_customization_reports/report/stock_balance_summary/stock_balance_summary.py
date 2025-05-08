@@ -443,7 +443,14 @@ class StockBalanceReport:
         return query
 
     def get_warehouse_totals(self, data):
-        grouped_data = defaultdict(lambda: {"bal_qty": 0.0, "bal_qty_alt": 0.0, "warehouse_total_qty": 0.0, "warehouse_total_qty_alt": 0.0})
+        grouped_data = defaultdict(
+            lambda: {
+                "bal_qty": 0.0,
+                "bal_qty_alt": 0.0,
+                "warehouse_total_qty": 0.0,
+                "warehouse_total_qty_alt": 0.0,
+            }
+        )
 
         # frappe.throw(str(grouped_data))
 
@@ -461,7 +468,9 @@ class StockBalanceReport:
                 "warehouse": f"Total - {key}",
                 "warehouse_total_qty": value["warehouse_total_qty"],
                 "warehouse_total_qty_alt": (
-                    value["warehouse_total_qty_alt"] if value.get("warehouse_total_qty_alt") else 0.0
+                    value["warehouse_total_qty_alt"]
+                    if value.get("warehouse_total_qty_alt")
+                    else 0.0
                 ),
                 "is_total": True,
             }
@@ -670,15 +679,17 @@ class StockBalanceReport:
             ]
 
         if self.filters.get("show_warehouse_totals"):
-            columns.append({
-                "label": _("Warehouse Total Qty"),
-                "fieldname": "warehouse_total_qty",
-                "fieldtype": (
+            columns.append(
+                {
+                    "label": _("Warehouse Total Qty"),
+                    "fieldname": "warehouse_total_qty",
+                    "fieldtype": (
                         "Int" if self.filters.get("remove_precision") else "Float"
                     ),
-                "width": 150,
-                "convertible": "qty"
-            })
+                    "width": 150,
+                    "convertible": "qty",
+                }
+            )
 
         return columns
 
