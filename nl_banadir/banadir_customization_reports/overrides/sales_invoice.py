@@ -80,7 +80,7 @@ def on_cancel(doc, method=None) -> None:
 
 
 def book_sales_partner_commission(doc):
-    if doc.sales_partner and doc.commission_amount > 0:
+    if doc.sales_partner and doc.commission_rate_qty > 0:
         frappe.log_error("Exectuted")
         try:
             accs = frappe.db.get_all(
