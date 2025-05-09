@@ -109,6 +109,13 @@ def get_columns():
             "width": 150,
         },
         {
+            "label": "Addition Expense Claim",
+            "fieldname": "additional_expense",
+            "fieldtype": "Link",
+            "options": "Expense Claim",
+            "width": 150,
+        },
+        {
             "label": "Currency",
             "fieldname": "currency",
             "fieldtype": "Link",
@@ -120,7 +127,7 @@ def get_columns():
 
 
 def get_data(filters):
-    conditions = []
+    conditions = ["(ec.custom_is_addition = 0 OR ec.custom_is_addition IS NULL)"]
     values = {}
 
     if filters.get("company"):
@@ -153,10 +160,11 @@ def get_data(filters):
     if condition_str:
         condition_str = "WHERE " + condition_str
 
+    # Get original expense claims (not additions)
     query = f"""
         SELECT
             ec.name AS expense_claim,
-            ec.expense_date AS booking_date,
+            ecd.expense_date AS booking_date,
             ec.company AS company,
             ec.custom_traveller_name AS traveller_name,
             ec.custom_travel_group AS type_of_travel,
@@ -179,18 +187,133 @@ def get_data(filters):
         ORDER BY ec.posting_date DESC
     """
 
-    raw_data = frappe.db.sql(query, values, as_dict=True)
+    original_claims = frappe.db.sql(query, values, as_dict=True)
+
+    # Fetch all additional expense claims
+    additional_claims = frappe.db.sql(
+        """
+        SELECT
+            ecd.amount,
+            ecd.parent AS expense_claim,
+            ecd.custom_voucher_no AS voucher_no,
+            ec.custom_original_expense_claim AS original_expense_claim
+        FROM
+            `tabExpense Claim Detail` ecd
+        JOIN
+            `tabExpense Claim` ec ON ec.name = ecd.parent
+        WHERE
+            ec.custom_is_addition = 1
+    """,
+        as_dict=True,
+    )
+
+    # Map additions to originals
+    additions_map = {}
+    for add in additional_claims:
+        original = add.get("original_expense_claim")
+        if original:
+            additions_map.setdefault(original, []).append(add)
+
+    # Get default currency
     company_currency = frappe.get_cached_value(
         "Company", filters.get("company"), "default_currency"
     )
 
-    # Convert amounts to USD
-    for row in raw_data:
-        amount_kes = row["amount"] or 0
-        date = row["booking_date"] or frappe.utils.nowdate()
+    # Combine data
+    for row in original_claims:
+        claim_name = row["expense_claim"]
+        additions = additions_map.get(claim_name, [])
+
+        additional_total = sum(a["amount"] for a in additions)
+        additional_refs = ", ".join(a["expense_claim"] for a in additions)
+
+        row["amount"] += additional_total
+        row["additional_expense"] = additional_refs if additional_refs else None
+        row["voucher_no"] = ", ".join(
+            filter(
+                None, [row.get("voucher_no")] + [a.get("voucher_no") for a in additions]
+            )
+        )
         row["currency"] = company_currency
-        row["amount_usd"] = convert_currency(amount_kes, company_currency, "USD", date)
-    return raw_data
+        row["amount_usd"] = convert_currency(
+            row["amount"], company_currency, "USD", row["booking_date"]
+        )
+
+    return original_claims
+
+
+# def get_data(filters):
+#     conditions = []
+#     values = {}
+
+#     if filters.get("company"):
+#         conditions.append("ec.company = %(company)s")
+#         values["company"] = filters["company"]
+
+#     if filters.get("company_group"):
+#         conditions.append("ec.company_group = %(company_group)s")
+#         values["company_group"] = filters["company_group"]
+
+#     if filters.get("booked_by"):
+#         conditions.append("ecd.custom_booked_by = %(booked_by)s")
+#         values["booked_by"] = filters["booked_by"]
+
+#     if filters.get("traveller_name"):
+#         conditions.append("ec.custom_traveller_name = %(traveller_name)s")
+#         values["traveller_name"] = filters["traveller_name"]
+
+#     if filters.get("travel_type"):
+#         conditions.append("ecd.custom_travel_type = %(travel_type)s")
+#         values["travel_type"] = filters["travel_type"]
+
+#     if filters.get("booking_date"):
+#         from_date, to_date = filters["booking_date"]
+#         conditions.append("ec.posting_date BETWEEN %(from_date)s AND %(to_date)s")
+#         values["from_date"] = getdate(from_date)
+#         values["to_date"] = getdate(to_date)
+
+#     condition_str = " AND ".join(conditions)
+#     if condition_str:
+#         condition_str = "WHERE " + condition_str
+
+#     query = f"""
+#         SELECT
+#             ec.name AS expense_claim,
+#             ec.expense_date AS booking_date,
+#             ec.company AS company,
+#             ec.custom_traveller_name AS traveller_name,
+#             ec.custom_travel_group AS type_of_travel,
+#             ecd.amount AS amount,
+#             ec.company_group AS company_group,
+#             ecd.custom_airlines AS airline,
+#             ecd.custom_date_of_travel AS departure_date,
+#             ecd.custom_departure_airport AS departure_airport,
+#             ecd.custom_date_of_arrival AS arrival_date,
+#             ecd.custom_arrival_airport AS arrival_airport,
+#             ecd.custom_booked_by AS booked_by,
+#             ecd.expense_type as expense_claim_type,
+#             ecd.custom_travel_type as travel_type,
+#             ecd.custom_voucher_no as voucher_no
+#         FROM
+#             `tabExpense Claim Detail` ecd
+#         JOIN
+#             `tabExpense Claim` ec ON ec.name = ecd.parent
+#         {condition_str}
+#         ORDER BY ec.posting_date DESC
+#     """
+
+#     raw_data = frappe.db.sql(query, values, as_dict=True)
+#     company_currency = frappe.get_cached_value(
+#         "Company", filters.get("company"), "default_currency"
+#     )
+
+#     # Convert amounts to USD
+#     for row in raw_data:
+#         amount_kes = row["amount"] or 0
+#         date = row["booking_date"] or frappe.utils.nowdate()
+#         row["currency"] = company_currency
+#         row["amount_usd"] = convert_currency(amount_kes, company_currency, "USD", date)
+#     return raw_data
 
 
 def convert_currency(amount, from_currency, to_currency, date):
