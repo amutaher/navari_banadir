@@ -26,6 +26,11 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 from erpnext.accounts.report.utils import convert_to_presentation_currency, get_currency
 from erpnext.accounts.utils import get_fiscal_year
 
+from erpnext.accounts.report.financial_statements import (
+    compute_growth_view_data,
+    compute_margin_view_data,
+)
+
 
 def execute(filters=None):
     period_list = get_period_list(
@@ -87,7 +92,11 @@ def execute(filters=None):
         currency,
         filters,
     )
-    # frappe.throw(str(data))
+    if filters.get("selected_view") == "Growth":
+        compute_growth_view_data(data, period_list)
+
+    if filters.get("selected_view") == "Margin":
+        compute_margin_view_data(data, period_list, filters.accumulated_values)
     return columns, data, None, chart, report_summary, primitive_summary
 
 

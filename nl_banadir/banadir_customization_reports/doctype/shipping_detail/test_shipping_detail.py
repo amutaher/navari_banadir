@@ -13,18 +13,18 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
 class UnitTestShippingDetail(UnitTestCase):
-	"""
-	Unit tests for ShippingDetail.
-	Use this class for testing individual functions and methods.
-	"""
+    """
+    Unit tests for ShippingDetail.
+    Use this class for testing individual functions and methods.
+    """
 
-	pass
+    pass
 
 
 class IntegrationTestShippingDetail(IntegrationTestCase):
-	"""
-	Integration tests for ShippingDetail.
-	Use this class for testing interactions between multiple components.
-	"""
+    """
+    Integration tests for ShippingDetail.
+    Use this class for testing interactions between multiple components.
+    """
 
-	pass
+    pass

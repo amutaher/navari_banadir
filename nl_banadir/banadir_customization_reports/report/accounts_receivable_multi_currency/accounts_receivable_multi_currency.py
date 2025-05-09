@@ -1293,14 +1293,14 @@ class ReceivablePayableReport:
 
         self.setup_ageing_columns()
 
-        if self.filters.account_type == "Payable":
-            self.add_column(
-                label="Total Amount Due",
-                fieldname="total_due",
-                fieldtype="Currency",
-                options="currency",
-                width=180,
-            )
+        # if self.filters.account_type == "Payable":
+        self.add_column(
+            label="Total Amount Due",
+            fieldname="total_due",
+            fieldtype="Currency",
+            options="currency",
+            width=180,
+        )
 
         self.add_column(
             label=_("Currency"),
