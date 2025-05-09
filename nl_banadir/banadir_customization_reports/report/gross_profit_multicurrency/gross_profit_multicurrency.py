@@ -196,6 +196,10 @@ def execute(filters=None):
         data = update_quantity_with_uom_conversion(data, filters)
     if filters.get("alternative_uom") and filters.group_by != "Customer":
         data = convert_alternative_uom(data, filters)
+
+    if filters.group_by == "Branch" or filters.group_by == "Marka":
+        data = update_currency(data, filters)
+
     return columns, data
 
 
@@ -1258,9 +1262,9 @@ def get_currency_fields(group_by):
         elif group_by == "Project":
             currency_indices = range(1, 4)
         elif group_by == "Branch":
-            currency_indices = range(2, 5)
+            currency_indices = range(2, 6)
         elif group_by == "Marka":
-            currency_indices = range(2, 5)
+            currency_indices = range(2, 6)
 
     return currency_fields, currency_indices
 
@@ -1499,5 +1503,14 @@ def update_quantity_with_uom_conversion(data, filters):
                 ) or frappe.get_cached_value(
                     "Company", filters.company, "default_currency"
                 )
+
+    return data
+
+
+def update_currency(data, filters):
+    for row in data:
+        row[-2] = filters.get("presentation_currency") or frappe.get_cached_value(
+            "Company", filters.company, "default_currency"
+        )
 
     return data
