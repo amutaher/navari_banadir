@@ -197,7 +197,18 @@ def execute(filters=None):
     if filters.get("alternative_uom") and filters.group_by != "Customer":
         data = convert_alternative_uom(data, filters)
 
-    if filters.group_by == "Branch" or filters.group_by == "Marka":
+    group_by_values = [
+        "Branch",
+        "Marka",
+        "Warehouse",
+        "Item Code",
+        "Item Group",
+        "Customer Group",
+        "Monthly",
+        "Payment Term",
+    ]
+
+    if filters.group_by in group_by_values:
         data = update_currency(data, filters)
 
     return columns, data
