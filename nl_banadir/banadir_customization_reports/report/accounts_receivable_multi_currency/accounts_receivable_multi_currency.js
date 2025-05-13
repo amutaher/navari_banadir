@@ -154,6 +154,11 @@ frappe.query_reports["Accounts Receivable Multi Currency"] = {
       fieldtype: "Check",
     },
     {
+      fieldname: "show_only_due",
+      label: __("Show Only Due"),
+      fieldtype: "Check",
+    },
+    {
       fieldname: "presentation_currency",
       label: __("Currency"),
       fieldtype: "Select",

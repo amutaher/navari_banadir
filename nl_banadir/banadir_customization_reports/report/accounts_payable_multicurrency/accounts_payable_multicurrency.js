@@ -168,6 +168,11 @@ frappe.query_reports["Accounts Payable MultiCurrency"] = {
       fieldtype: "Select",
       options: erpnext.get_presentation_currency_list(),
     },
+    {
+      fieldname: "show_only_due",
+      label: __("Show Only Due"),
+      fieldtype: "Check",
+    },
   ],
 
   formatter: function (value, row, column, data, default_formatter) {
