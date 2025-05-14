@@ -249,6 +249,7 @@ def _execute(filters=None, additional_table_columns=None):
     data = convert_as_per_current_exchange_rate(
         data, filters, "USD", presentation_currency
     )
+    # frappe.throw(str(data))
     data = convert_currency_fields(data, filters)
     data = convert_alternative_uom(data, filters)
     data = append_total_row(data)
@@ -462,71 +463,96 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Rate ({presentation_currency})"),
             "fieldname": "rate",
-            "fieldtype": "Float",
-            "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
+            # "precision": 2,
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Current Rate ({presentation_currency})"),
             "fieldname": "current_rate",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Landed Cost ({presentation_currency})"),
             "fieldname": "landed_cost_voucher_amount",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Current Landed Cost ({presentation_currency})"),
             "fieldname": "current_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": f"Rate + LC ({presentation_currency})",
             "fieldname": "rate_plus_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": f"Current Rate + LC({presentation_currency})",
             "fieldname": "current_rate_plus_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             # "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Amount({presentation_currency})"),
             "fieldname": "amount",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
             "label": _(f"Total LC ({presentation_currency})"),
             "fieldname": "total_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
             "label": _(f"Amount + LC ({presentation_currency})"),
             "fieldname": "amount_plus_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
+        },
+        {
+            "label": _("Currency"),
+            "fieldname": "currency",
+            "fieldtype": "Link",
+            "options": "Currency",
+            "width": 100,
+            "hidden": 1,
         },
     ]
 
@@ -534,8 +560,10 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Current Total ({presentation_currency})"),
             "fieldname": "current_total",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "hidden": 1 if filters.get("hide_column") else 0,
         }
     )
@@ -884,8 +912,11 @@ def invoice_details(item_code, row, data, presentation_currency):
     row["landed_cost_voucher_amount"] = landed_cost
     row["amount_plus_landed_cost"] = amount_plus_landed_cost
     row["total_landed_cost"] = total_landed_cost
-
     return data
+
+
+def get_currency_symbol(currency_code):
+    return frappe.db.get_value("Currency", currency_code, "symbol") or ""
 
 
 def append_total_row(data):
@@ -901,14 +932,28 @@ def append_total_row(data):
         if not item_exists(row.get("item_code")):
             continue
 
+        currency_code = row.get("currency")
+        symbol = get_currency_symbol(currency_code) if currency_code else ""
+
         for key, value in row.items():
-            if isinstance(value, (int, float)):
+            if key == "currency":
+                total_row["currency"] = currency_code
+            elif isinstance(value, (int, float)):
                 total_row[key] = total_row.get(key, 0) + value
-            elif isinstance(value, str) and value.startswith("$"):
+            elif isinstance(value, str) and value.startswith(symbol):
                 try:
-                    total_row[key] = total_row.get(key, 0) + float(value.strip("$"))
+                    amount = float(value.strip(symbol).replace(",", ""))
+                    total_row[key] = total_row.get(key, 0) + amount
                 except ValueError:
-                    total_row[key] = total_row.get(key, 0)
+                    continue
+
+    currency_code = total_row.get("currency")
+    symbol = get_currency_symbol(currency_code) if currency_code else ""
+
+    for key in total_row.keys():
+        if key != "bold" and isinstance(total_row[key], (int, float)):
+            if "currency" in key.lower():
+                total_row[key] = f"{symbol}{total_row[key]:,.2f}"
 
     total_row["item_code"] = "Totals"
     data.append(total_row)
