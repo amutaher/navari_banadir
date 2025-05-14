@@ -249,6 +249,7 @@ def _execute(filters=None, additional_table_columns=None):
     data = convert_as_per_current_exchange_rate(
         data, filters, "USD", presentation_currency
     )
+    # frappe.throw(str(data))
     data = convert_currency_fields(data, filters)
     data = convert_alternative_uom(data, filters)
     data = append_total_row(data)
@@ -462,71 +463,96 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Rate ({presentation_currency})"),
             "fieldname": "rate",
-            "fieldtype": "Float",
-            "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
+            # "precision": 2,
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Current Rate ({presentation_currency})"),
             "fieldname": "current_rate",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Landed Cost ({presentation_currency})"),
             "fieldname": "landed_cost_voucher_amount",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Current Landed Cost ({presentation_currency})"),
             "fieldname": "current_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": f"Rate + LC ({presentation_currency})",
             "fieldname": "rate_plus_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": f"Current Rate + LC({presentation_currency})",
             "fieldname": "current_rate_plus_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
             # "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Amount({presentation_currency})"),
             "fieldname": "amount",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
             "label": _(f"Total LC ({presentation_currency})"),
             "fieldname": "total_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
             "label": _(f"Amount + LC ({presentation_currency})"),
             "fieldname": "amount_plus_landed_cost",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
+        },
+        {
+            "label": _("Currency"),
+            "fieldname": "currency",
+            "fieldtype": "Link",
+            "options": "Currency",
+            "width": 100,
+            "hidden": 1,
         },
     ]
 
@@ -534,8 +560,10 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Current Total ({presentation_currency})"),
             "fieldname": "current_total",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "hidden": 1 if filters.get("hide_column") else 0,
         }
     )
@@ -884,7 +912,6 @@ def invoice_details(item_code, row, data, presentation_currency):
     row["landed_cost_voucher_amount"] = landed_cost
     row["amount_plus_landed_cost"] = amount_plus_landed_cost
     row["total_landed_cost"] = total_landed_cost
-
     return data
 
 

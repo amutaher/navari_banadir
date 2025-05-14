@@ -105,7 +105,7 @@ def execute(filters=None):
 
     update_included_uom_in_report(columns, data, include_uom, conversion_factors)
     data = convert_currency_fields(data, filters)
-    # frappe.throw(str(data))
+
     return columns, data
 
 
@@ -300,10 +300,26 @@ def get_columns(filters):
             },
             {"label": _("Description"), "fieldname": "description", "width": 200},
             {
+                "label": _("Exchange Rate"),
+                "fieldname": "exchange_rate",
+                "fieldtype": "Float",
+                "width": 100,
+                "hidden": 1 if filters.get("hide_column") else 0,
+            },
+            {
+                "label": "Current Exchange Rate",
+                "fieldname": "current_exchange_rate",
+                "fieldtype": "Float",
+                "width": 100,
+                "hidden": 1 if filters.get("hide_column") else 0,
+            },
+            {
                 "label": _(f"Incoming Rate<strong>({presentation_currency})</strong>"),
                 "fieldname": "incoming_rate",
-                "fieldtype": "Float",
-                "precision": 2,
+                # "fieldtype": "Float",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 110,
                 "convertible": "rate",
             },
@@ -312,8 +328,8 @@ def get_columns(filters):
                     f"Avg Rate (Balance Stock)-<strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "valuation_rate",
-                "fieldtype": "Float",
-                "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 180,
                 "convertible": "rate",
             },
@@ -322,23 +338,27 @@ def get_columns(filters):
                     f"Valuation Rate <strong>({presentation_currency})</strong>"
                 ),
                 "fieldname": "in_out_rate",
-                "fieldtype": "Float",
-                "precision": 2,
+                # "fieldtype": "Float",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 140,
                 "convertible": "rate",
             },
             {
                 "label": _(f"Balance Value <strong>({presentation_currency})</strong>"),
                 "fieldname": "stock_value",
-                "fieldtype": "Float",
-                "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 110,
             },
             {
                 "label": _(f"Value Change<strong>({presentation_currency})</strong>"),
                 "fieldname": "stock_value_difference",
-                "fieldtype": "Float",
-                "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
+                # "fieldtype": "Float",
+                # "precision": 2,
                 "width": 110,
             },
             {"label": _("Voucher Type"), "fieldname": "voucher_type", "width": 110},
@@ -383,6 +403,14 @@ def get_columns(filters):
                 "fieldtype": "Link",
                 "options": "Company",
                 "width": 110,
+            },
+            {
+                "label": _("Currency"),
+                "fieldname": "currency",
+                "fieldtype": "Link",
+                "options": "Currency",
+                "width": 100,
+                # "hidden": 1,
             },
         ]
     )
@@ -662,7 +690,8 @@ def convert_currency_fields(data, filters):
         entry["in_out_rate"] = convert(
             entry.get("in_out_rate", 0), from_currency, to_currency, date
         )
-
+        entry["currency"] = from_currency
+    # frappe.throw(str(data))
     return data
 
 
