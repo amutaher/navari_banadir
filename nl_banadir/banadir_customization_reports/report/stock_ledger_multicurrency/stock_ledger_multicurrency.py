@@ -24,6 +24,7 @@ from erpnext.stock.utils import (
     is_reposting_item_valuation_in_progress,
     update_included_uom_in_report,
 )
+from erpnext.setup.utils import get_exchange_rate
 
 from erpnext.accounts.report.utils import convert
 
@@ -34,6 +35,7 @@ def execute(filters=None):
     columns = get_columns(filters)
     items = get_items(filters)
     sl_entries = get_stock_ledger_entries(filters, items)
+
     item_details = get_item_details(items, sl_entries, include_uom)
     opening_row = get_opening_balance(filters, columns, sl_entries)
     precision = cint(frappe.db.get_single_value("System Settings", "float_precision"))
@@ -105,6 +107,10 @@ def execute(filters=None):
 
     update_included_uom_in_report(columns, data, include_uom, conversion_factors)
     data = convert_currency_fields(data, filters)
+    for row in data:
+        row["exchange_rate"], row["current_exchange_rate"] = _get_exchange_rate(
+            filters.get("company"), row.get("posting_date")
+        )
 
     return columns, data
 
@@ -410,7 +416,7 @@ def get_columns(filters):
                 "fieldtype": "Link",
                 "options": "Currency",
                 "width": 100,
-                # "hidden": 1,
+                "hidden": 1,
             },
         ]
     )
@@ -712,3 +718,11 @@ def create_valuation_rate_with_uom(filter):
         formatted_uom = format_uom(filter.get("include_uom"))
         full_formatted_uom = "valuation_rate_" + formatted_uom
         return full_formatted_uom
+
+
+def _get_exchange_rate(company, posting_date):
+    today = frappe.utils.getdate()
+    company_currency = frappe.get_cached_value("Company", company, "default_currency")
+    exchange_rate = get_exchange_rate("USD", company_currency, posting_date)
+    current_exchange_rate = get_exchange_rate("USD", company_currency, today)
+    return exchange_rate, current_exchange_rate
