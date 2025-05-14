@@ -915,6 +915,10 @@ def invoice_details(item_code, row, data, presentation_currency):
     return data
 
 
+def get_currency_symbol(currency_code):
+    return frappe.db.get_value("Currency", currency_code, "symbol") or ""
+
+
 def append_total_row(data):
     if not data:
         return data
@@ -928,14 +932,28 @@ def append_total_row(data):
         if not item_exists(row.get("item_code")):
             continue
 
+        currency_code = row.get("currency")
+        symbol = get_currency_symbol(currency_code) if currency_code else ""
+
         for key, value in row.items():
-            if isinstance(value, (int, float)):
+            if key == "currency":
+                total_row["currency"] = currency_code
+            elif isinstance(value, (int, float)):
                 total_row[key] = total_row.get(key, 0) + value
-            elif isinstance(value, str) and value.startswith("$"):
+            elif isinstance(value, str) and value.startswith(symbol):
                 try:
-                    total_row[key] = total_row.get(key, 0) + float(value.strip("$"))
+                    amount = float(value.strip(symbol).replace(",", ""))
+                    total_row[key] = total_row.get(key, 0) + amount
                 except ValueError:
-                    total_row[key] = total_row.get(key, 0)
+                    continue
+
+    currency_code = total_row.get("currency")
+    symbol = get_currency_symbol(currency_code) if currency_code else ""
+
+    for key in total_row.keys():
+        if key != "bold" and isinstance(total_row[key], (int, float)):
+            if "currency" in key.lower():
+                total_row[key] = f"{symbol}{total_row[key]:,.2f}"
 
     total_row["item_code"] = "Totals"
     data.append(total_row)
