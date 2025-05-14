@@ -63,13 +63,9 @@ def format_quantity_with_thousand_separator(data):
         if item_code:
             for key, value in row.items():
                 if isinstance(value, (int, float)):
-                    print("-----------------------------------------")
-                    print("Value", str(value))
                     row[key] = (
                         f"{value:,.2f}" if isinstance(value, float) else f"{value:,}"
                     )
-                else:
-                    print("Mania")
     return data
 
 
@@ -84,9 +80,11 @@ class Analytics:
         self.date_field = (
             "transaction_date"
             if self.filters.doc_type in ["Quotation", "Sales Order", "Purchase Order"]
-            else "due_date"
-            if self.filters.doc_type == "Sales Invoice (due)"
-            else "posting_date"
+            else (
+                "due_date"
+                if self.filters.doc_type == "Sales Invoice (due)"
+                else "posting_date"
+            )
         )
         if self.filters.doc_type.startswith("Sales Invoice"):
             self.filters.doc_type = "Sales Invoice"
@@ -138,13 +136,15 @@ class Analytics:
         self.columns = [
             {
                 "label": _(self.filters.tree_type),
-                "options": self.filters.tree_type
-                if self.filters.tree_type != "Order Type"
-                else "",
+                "options": (
+                    self.filters.tree_type
+                    if self.filters.tree_type != "Order Type"
+                    else ""
+                ),
                 "fieldname": "entity",
-                "fieldtype": "Link"
-                if self.filters.tree_type != "Order Type"
-                else "Data",
+                "fieldtype": (
+                    "Link" if self.filters.tree_type != "Order Type" else "Data"
+                ),
                 "width": 140 if self.filters.tree_type != "Order Type" else 200,
             },
             {
@@ -182,12 +182,14 @@ class Analytics:
                 {
                     "label": _(period),
                     "fieldname": scrub(period),
-                    "fieldtype": "Currency"
-                    if self.filters.value_quantity == "Value"
-                    else ("Int" if self.filters.no_precision == 1 else "Float"),
-                    "options": "currency"
-                    if self.filters.value_quantity == "Value"
-                    else "",
+                    "fieldtype": (
+                        "Currency"
+                        if self.filters.value_quantity == "Value"
+                        else ("Int" if self.filters.no_precision == 1 else "Float")
+                    ),
+                    "options": (
+                        "currency" if self.filters.value_quantity == "Value" else ""
+                    ),
                     "precision": 1 if self.filters.no_precision == 1 else None,
                     "width": 120,
                 }
@@ -197,9 +199,11 @@ class Analytics:
             {
                 "label": _("Total"),
                 "fieldname": "total",
-                "fieldtype": "Currency"
-                if self.filters.value_quantity == "Value"
-                else ("Int" if self.filters.no_precision == 1 else "Float"),
+                "fieldtype": (
+                    "Currency"
+                    if self.filters.value_quantity == "Value"
+                    else ("Int" if self.filters.no_precision == 1 else "Float")
+                ),
                 "options": "currency" if self.filters.value_quantity == "Value" else "",
                 "precision": 1 if self.filters.no_precision == 1 else None,
                 "width": 120,
@@ -248,6 +252,20 @@ class Analytics:
                 self.data = []
                 return
             self.get_sales_transactions_based_on_project()
+            self.get_rows()
+
+        elif self.filters.tree_type == "Marka":
+            if self.filters.doc_type == "Quotation":
+                self.data = []
+                return
+            self.get_sales_transactions_based_on_entity("marka")
+            self.get_rows()
+
+        elif self.filters.tree_type == "Company Group":
+            if self.filters.doc_type == "Quotation":
+                self.data = []
+                return
+            self.get_sales_transactions_based_on_entity("company_group")
             self.get_rows()
 
     def get_sales_transactions_based_on_order_type(self):
@@ -384,6 +402,62 @@ class Analytics:
 
         self.get_groups()
 
+    # def get_sales_transactions_based_on_marka(self):
+    #     if self.filters["value_quantity"] == "Value":
+    #         value_field = "base_net_total as value_field"
+    #     else:
+    #         value_field = "total_qty as value_field"
+
+    #     if self.filters.doc_type == "Payment Entry":
+    #         value_field = "base_received_amount as value_field"
+
+    #     entity = "marka as entity"
+
+    #     self.entries = frappe.get_all(
+    #         self.filters.doc_type,
+    #         fields=[entity, value_field, self.date_field],
+    #         filters={
+    #             "docstatus": 1,
+    #             "company": self.filters.company,
+    #             "marka": ["!=", ""],
+    #             self.date_field: (
+    #                 "between",
+    #                 [self.filters.from_date, self.filters.to_date],
+    #             ),
+    #         },
+    #     )
+
+    # def get_sales_transactions_based_on_marka(self):
+    #     self.get_sales_transactions_based_on_entity("marka")
+
+    # def get_sales_transactions_based_on_company_group(self):
+    #     self.get_sales_transactions_based_on_entity("company_group")
+
+    def get_sales_transactions_based_on_entity(self, entity_name):
+        if self.filters["value_quantity"] == "Value":
+            value_field = "base_net_total as value_field"
+        else:
+            value_field = "total_qty as value_field"
+
+        if self.filters.doc_type == "Payment Entry":
+            value_field = "base_received_amount as value_field"
+
+        entity = f"{entity_name} as entity"
+
+        self.entries = frappe.get_all(
+            self.filters.doc_type,
+            fields=[entity, value_field, self.date_field],
+            filters={
+                "docstatus": 1,
+                "company": self.filters.company,
+                f"{entity_name}": ["!=", ""],
+                self.date_field: (
+                    "between",
+                    [self.filters.from_date, self.filters.to_date],
+                ),
+            },
+        )
+
     def get_sales_transactions_based_on_project(self):
         if self.filters["value_quantity"] == "Value":
             value_field = "base_net_total as value_field"
@@ -416,9 +490,11 @@ class Analytics:
         for entity, period_data in self.entity_periodic_data.items():
             row = {
                 "entity": entity,
-                "entity_name": self.entity_names.get(entity)
-                if hasattr(self, "entity_names")
-                else None,
+                "entity_name": (
+                    self.entity_names.get(entity)
+                    if hasattr(self, "entity_names")
+                    else None
+                ),
             }
             total = 0
             for end_date in self.periodic_daterange:
