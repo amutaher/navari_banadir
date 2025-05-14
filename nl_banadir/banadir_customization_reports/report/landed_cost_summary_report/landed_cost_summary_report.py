@@ -84,9 +84,9 @@ def get_columns(filters=None):
             2,
             {
                 "label": "Marka (Branch)",
-                "fieldname": "branch",
+                "fieldname": "marka",
                 "fieldtype": "Link",
-                "options": "Branch",
+                "options": "Marka",
                 "width": "150",
             },
         )
@@ -206,6 +206,7 @@ def get_data(filters):
             PurchaseInvoice.posting_date.as_("posting_date"),
             PurchaseInvoice.currency.as_("invoice_currency"),
             PurchaseInvoice.branch.as_("branch"),
+            PurchaseInvoice.marka.as_("marka"),
             PurchaseInvoice.conversion_rate.as_("conversion_rate"),
             ConstantColumn("").as_("expense_account"),
             PurchaseInvoice.custom_container_no.as_("container_no"),
