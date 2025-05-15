@@ -225,15 +225,12 @@ def update_available_serial_nos(available_serial_nos, sle):
 
 
 def get_columns(filters):
-    presentation_currency = filters.get(
-        "presentation_currency"
-    ) or frappe.get_cached_value("Company", filters.company, "default_currency")
     columns = [
         {
             "label": _("Date"),
             "fieldname": "date",
             "fieldtype": "Datetime",
-            "width": 150,
+            "width": 130,
         },
         {
             "label": _("Item"),
@@ -326,7 +323,7 @@ def get_columns(filters):
                 "hidden": 1 if filters.get("hide_column") else 0,
             },
             {
-                "label": _(f"Incoming Rate<strong>({presentation_currency})</strong>"),
+                "label": _("Incoming Rate"),
                 "fieldname": "incoming_rate",
                 # "fieldtype": "Float",
                 # "precision": 2,
@@ -336,7 +333,7 @@ def get_columns(filters):
                 "convertible": "rate",
             },
             {
-                "label": _("Latest Incoming Rate"),
+                "label": _("Curr Incoming Rate"),
                 "fieldname": "current_incoming_rate",
                 # "fieldtype": "Float",
                 # "precision": 2,
@@ -346,61 +343,57 @@ def get_columns(filters):
                 "convertible": "rate",
             },
             {
-                "label": _(
-                    f"Avg Rate (Balance Stock)-<strong>({presentation_currency})</strong>"
-                ),
+                "label": _("Avg Rate (Balance Stock)"),
                 "fieldname": "valuation_rate",
                 "fieldtype": "Currency",
                 "options": "currency",
-                "width": 180,
+                "width": 110,
                 "convertible": "rate",
             },
             {
-                "label": _("Latest Avg Rate (Balance Stock)"),
+                "label": _("Curr Avg Rate (Balance Stock)"),
                 "fieldname": "current_valuation_rate",
                 "fieldtype": "Currency",
                 "options": "currency",
-                "width": 180,
+                "width": 110,
                 "convertible": "rate",
             },
             {
-                "label": _(
-                    f"Valuation Rate <strong>({presentation_currency})</strong>"
-                ),
+                "label": _("Valuation Rate"),
                 "fieldname": "in_out_rate",
                 # "fieldtype": "Float",
                 # "precision": 2,
                 "fieldtype": "Currency",
                 "options": "currency",
-                "width": 140,
+                "width": 110,
                 "convertible": "rate",
             },
             {
-                "label": _("Latest Valuation Rate"),
+                "label": _("Curr Valuation Rate"),
                 "fieldname": "current_in_out_rate",
                 # "fieldtype": "Float",
                 # "precision": 2,
                 "fieldtype": "Currency",
                 "options": "currency",
-                "width": 140,
+                "width": 110,
                 "convertible": "rate",
             },
             {
-                "label": _(f"Balance Value <strong>({presentation_currency})</strong>"),
+                "label": _("Balance Value"),
                 "fieldname": "stock_value",
                 "fieldtype": "Currency",
                 "options": "currency",
                 "width": 110,
             },
             {
-                "label": _("Latest Balance Value"),
+                "label": _("Curr Balance Value"),
                 "fieldname": "current_stock_value",
                 "fieldtype": "Currency",
                 "options": "currency",
                 "width": 110,
             },
             {
-                "label": _(f"Value Change<strong>({presentation_currency})</strong>"),
+                "label": _("Value Change"),
                 "fieldname": "stock_value_difference",
                 "fieldtype": "Currency",
                 "options": "currency",
@@ -409,7 +402,7 @@ def get_columns(filters):
                 "width": 110,
             },
             {
-                "label": _("Latest Value Change"),
+                "label": _("Curr Value Change"),
                 "fieldname": "current_stock_value_difference",
                 "fieldtype": "Currency",
                 "options": "currency",
@@ -721,6 +714,7 @@ def check_inventory_dimension_filters_applied(filters) -> bool:
 def convert_currency_fields(data, filters):
     valuation_rat_uom = create_valuation_rate_with_uom(filters)
     date = filters.get("currency_exchange_date") or frappe.utils.now()
+
     to_currency = frappe.get_cached_value(
         "Company", filters.company, "default_currency"
     )
@@ -747,7 +741,6 @@ def convert_currency_fields(data, filters):
             entry.get("in_out_rate", 0), from_currency, to_currency, date
         )
         entry["currency"] = from_currency
-    # frappe.throw(str(data))
     return data
 
 
@@ -776,33 +769,6 @@ def _get_exchange_rate(company, posting_date):
     exchange_rate = get_exchange_rate("USD", company_currency, posting_date)
     current_exchange_rate = get_exchange_rate("USD", company_currency, today)
     return exchange_rate, current_exchange_rate
-
-
-# def get_current_exchange_rate(from_currency, to_currency, date):
-#     if to_currency in [
-#         "CDF",
-#         "KES",
-#         "TZS",
-#         "UGX",
-#         "NGN",
-#         "ETB",
-#         "GNF",
-#         "SDG",
-#         "XAF",
-#         "AED",
-#     ]:
-#         currency_exchanges = frappe.get_all(
-#             "Currency Exchange",
-#             filters={"from_currency": from_currency, "to_currency": to_currency},
-#             fields=["exchange_rate"],
-#         )
-#         if currency_exchanges:
-#             return currency_exchanges[0].exchange_rate
-#     else:
-#         exchange_rate = get_rate_as_at(date, from_currency, to_currency)
-#         if exchange_rate == 1 and from_currency != to_currency:
-#             pass
-#         return exchange_rate
 
 
 def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
@@ -884,23 +850,5 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
                 entry["current_stock_value_difference"] = (
                     current_stock_value_difference_chosen_currency
                 )
-
-            # Calculate current_total
-            # old_total_in_usd = entry["amount"] / entry["exchange_rate"]
-            # current_total_chosen_currency = (
-            #     get_current_exchange_rate(from_currency, to_currency, date)
-            #     * old_total_in_usd
-            # )
-            # current_total_in_usd = convert(
-            #     current_total_chosen_currency, "USD", to_currency, date
-            # )
-
-            # if filters.get("presentation_currency") == "USD":
-            #     entry["current_total"] = current_total_in_usd
-            # else:
-            #     entry["current_total"] = current_total_chosen_currency
-            # entry["current_exchange_rate"] = get_current_exchange_rate(
-            #     from_currency, to_currency, date
-            # )
 
     return data
