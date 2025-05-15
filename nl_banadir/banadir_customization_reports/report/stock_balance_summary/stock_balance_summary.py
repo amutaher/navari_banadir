@@ -80,9 +80,8 @@ class StockBalanceReport:
 
         self.add_additional_uom_columns()
 
-        if self.filters.get("show_warehouse_totals"):
-            if self.data:
-                self.get_warehouse_totals(data=self.data)
+        if self.data:
+            self.get_warehouse_totals(data=self.data)
 
         if self.filters.get("eliminate_zero_values"):
             updated_data = []
@@ -91,7 +90,7 @@ class StockBalanceReport:
                     updated_data.append(entry)
 
             self.data = updated_data
-
+        # frappe.throw(str(self.data))
         return self.columns, self.data
 
     def calculate_total_bal_qty(self):
@@ -441,47 +440,67 @@ class StockBalanceReport:
         return query
 
     def get_warehouse_totals(self, data):
-        grouped_data = defaultdict(
-            lambda: {
-                "bal_qty": 0.0,
-                "bal_qty_alt": 0.0,
-            }
-        )
+        skip_keys = {
+            "item_code",
+            "item_name",
+            "warehouse",
+            "company",
+            "item_group",
+            "stock_uom",
+            "branch",
+            "workstation",
+            "currency",
+            "opening_fifo_queue",
+        }
 
-        # frappe.throw(str(grouped_data))
+        # Dynamically detect numeric keys for totals
+        numeric_keys = set()
+        for entry in data:
+            for key, value in entry.items():
+                if key not in skip_keys and isinstance(value, (int, float)):
+                    numeric_keys.add(key)
+
+        grouped_data = defaultdict(lambda: defaultdict(float))
+        grand_total = defaultdict(float)
 
         for entry in data:
-            key = entry["warehouse"]
-            if self.filters.get("include_uom"):
-                grouped_data[key]["bal_qty_alt"] += entry["bal_qty_alt"]
-            grouped_data[key]["bal_qty"] += entry["bal_qty"]
+            warehouse = entry.get("warehouse")
+            if not warehouse or warehouse.startswith("Total -") or warehouse == "Total":
+                continue
 
-        result = [
-            {
-                "item_code": f"Total - {key}",
-                "warehouse": f"Total - {key}",
-                "bal_qty": value["bal_qty"],
-                "bal_qty_alt": (
-                    value["bal_qty_alt"] if value.get("bal_qty_alt") else 0.0
-                ),
-                "is_total": True,
-            }
-            for key, value in grouped_data.items()
-        ]
+            for key in numeric_keys:
+                value = entry.get(key, 0.0)
+                grand_total[key] += value
+                if self.filters.get("show_warehouse_totals"):
+                    grouped_data[warehouse][key] += value
 
-        for r in result:
-            self.data.append(r)
+        # Add per-warehouse totals
+        if self.filters.get("show_warehouse_totals"):
+            for warehouse, totals in grouped_data.items():
+                row = {
+                    "item_code": f"Total - {warehouse}",
+                    "warehouse": f"Total - {warehouse}",
+                    "is_total": True,
+                }
+                row.update(totals)
+                self.data.append(row)
 
-        sorted_data = sorted(
+        # Add grand total
+        grand_total_row = {"item_code": "Total", "warehouse": "Total", "is_total": True}
+        grand_total_row.update(grand_total)
+        self.data.append(grand_total_row)
+
+        # Sort: place "Total - X" after their warehouse, "Total" always last
+        self.data = sorted(
             self.data,
             key=lambda x: (
+                1 if x["warehouse"] == "Total" else 0,
                 x["warehouse"][8:]
                 if x["warehouse"].startswith("Total - ")
-                else x["warehouse"]
+                else x["warehouse"],
+                1 if x["warehouse"].startswith("Total - ") else 0,
             ),
         )
-
-        self.data = sorted_data
 
     def get_columns(self):
         columns = [
@@ -780,6 +799,24 @@ class StockBalanceReport:
             row[1] = getdate(row[1])
 
         return opening_fifo_queue
+
+    # def add_grand_total_row(self):
+    #     total_row = {
+    #         "item_code": "Grand Total",
+    #         "warehouse": "Grand Total",
+    #         "is_total": True
+    #     }
+
+    #     numeric_fields = [
+    #         "bal_qty", "bal_qty_alt", "bal_val", "opening_qty", "opening_val",
+    #         "in_qty", "in_qty_purchase", "in_val", "out_qty", "out_qty_sales", "out_val",
+    #         "reserved_stock"
+    #     ]
+
+    #     for field in numeric_fields:
+    #         total_row[field] = sum(entry.get(field, 0) for entry in self.data if not entry.get("is_total"))
+
+    #     self.data.append(total_row)
 
 
 def filter_items_with_no_transactions(
