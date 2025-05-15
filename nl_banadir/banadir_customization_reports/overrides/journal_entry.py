@@ -23,3 +23,29 @@ def on_submit(doc, method=None):
                 )
 
                 cc_doc.insert()
+
+
+def before_submit(doc, method=None):
+    try:
+        payroll_entry = list(
+            set(
+                [
+                    a.reference_name
+                    for a in doc.accounts
+                    if a.reference_type == "Payroll Entry"
+                ]
+            )
+        )
+
+        if len(payroll_entry) > 1:
+            return
+
+        branch = frappe.db.get_value("Payroll Entry", payroll_entry[0], "branch")
+
+        if branch:
+            for account in doc.accounts:
+                if account.reference_type == "Payroll Entry":
+                    account.branch = branch
+
+    except Exception:
+        frappe.log_error("Error in Journal Entry", frappe.get_traceback())

@@ -72,6 +72,7 @@ doc_events = {
         "before_submit": [
             "nl_banadir.banadir_customization_reports.controllers.negative_cash.before_save",
             "nl_banadir.banadir_customization_reports.controllers.assign_and_share.journal_entry_before_submit",
+            "nl_banadir.banadir_customization_reports.overrides.journal_entry.before_submit",
         ],
         "on_submit": "nl_banadir.banadir_customization_reports.overrides.journal_entry.on_submit",
         "validate": "nl_banadir.banadir_customization_reports.utils.utils.validate_branch_company_item_level",

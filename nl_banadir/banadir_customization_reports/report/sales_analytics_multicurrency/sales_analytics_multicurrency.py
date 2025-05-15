@@ -402,37 +402,6 @@ class Analytics:
 
         self.get_groups()
 
-    # def get_sales_transactions_based_on_marka(self):
-    #     if self.filters["value_quantity"] == "Value":
-    #         value_field = "base_net_total as value_field"
-    #     else:
-    #         value_field = "total_qty as value_field"
-
-    #     if self.filters.doc_type == "Payment Entry":
-    #         value_field = "base_received_amount as value_field"
-
-    #     entity = "marka as entity"
-
-    #     self.entries = frappe.get_all(
-    #         self.filters.doc_type,
-    #         fields=[entity, value_field, self.date_field],
-    #         filters={
-    #             "docstatus": 1,
-    #             "company": self.filters.company,
-    #             "marka": ["!=", ""],
-    #             self.date_field: (
-    #                 "between",
-    #                 [self.filters.from_date, self.filters.to_date],
-    #             ),
-    #         },
-    #     )
-
-    # def get_sales_transactions_based_on_marka(self):
-    #     self.get_sales_transactions_based_on_entity("marka")
-
-    # def get_sales_transactions_based_on_company_group(self):
-    #     self.get_sales_transactions_based_on_entity("company_group")
-
     def get_sales_transactions_based_on_entity(self, entity_name):
         if self.filters["value_quantity"] == "Value":
             value_field = "base_net_total as value_field"
@@ -817,6 +786,8 @@ def add_currency_label(columns, filters):
         "Project",
         "Customer",
         "Supplier",
+        "Marka",
+        "Company Group",
     ]
 
     # Loop through each column and update the label
