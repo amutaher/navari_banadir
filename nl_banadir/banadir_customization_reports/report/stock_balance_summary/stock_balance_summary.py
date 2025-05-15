@@ -800,24 +800,6 @@ class StockBalanceReport:
 
         return opening_fifo_queue
 
-    # def add_grand_total_row(self):
-    #     total_row = {
-    #         "item_code": "Grand Total",
-    #         "warehouse": "Grand Total",
-    #         "is_total": True
-    #     }
-
-    #     numeric_fields = [
-    #         "bal_qty", "bal_qty_alt", "bal_val", "opening_qty", "opening_val",
-    #         "in_qty", "in_qty_purchase", "in_val", "out_qty", "out_qty_sales", "out_val",
-    #         "reserved_stock"
-    #     ]
-
-    #     for field in numeric_fields:
-    #         total_row[field] = sum(entry.get(field, 0) for entry in self.data if not entry.get("is_total"))
-
-    #     self.data.append(total_row)
-
 
 def filter_items_with_no_transactions(
     iwb_map, float_precision: float, inventory_dimensions: list | None = None
