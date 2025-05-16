@@ -6,6 +6,9 @@
 
 from operator import itemgetter
 from typing import Any, TypedDict
+from erpnext.setup.utils import get_exchange_rate
+from erpnext.accounts.report.utils import convert
+
 
 import frappe
 from frappe import _
@@ -21,7 +24,6 @@ from erpnext.stock.doctype.inventory_dimension.inventory_dimension import (
 from erpnext.stock.doctype.warehouse.warehouse import apply_warehouse_filter
 from erpnext.stock.report.stock_ageing.stock_ageing import FIFOSlots, get_average_age
 from erpnext.stock.utils import add_additional_uom_columns
-from erpnext.accounts.report.utils import convert
 
 
 class StockBalanceFilter(TypedDict):
@@ -69,17 +71,28 @@ class StockBalanceReport:
 
     def run(self):
         self.float_precision = cint(frappe.db.get_default("float_precision")) or 3
-
+        if not self.filters.get("company"):
+            frappe.throw("Company is required")
         self.inventory_dimensions = self.get_inventory_dimension_fields()
         self.prepare_opening_data_from_closing_balance()
         self.prepare_stock_ledger_entries()
         self.prepare_new_data()
-
+        presentation_currency = self.filters.get(
+            "presentation_currency"
+        ) or frappe.get_cached_value("Company", self.filters.get("company"))
         if not self.columns:
             self.columns = self.get_columns(self.filters)
 
         self.add_additional_uom_columns()
         self.data = self.convert_currency_fields(self.data, self.filters)
+        for row in self.data:
+            row["exchange_rate"], row["current_exchange_rate"] = _get_exchange_rate(
+                self.filters.get("company"), row.get("posting_date")
+            )
+        self.data = convert_as_per_current_exchange_rate(
+            self.data, self.filters, "USD", presentation_currency
+        )
+
         return self.columns, self.data
 
     def prepare_opening_data_from_closing_balance(self) -> None:
@@ -464,8 +477,31 @@ class StockBalanceReport:
                     "convertible": "qty",
                 },
                 {
+                    "label": _("Exchange Rate"),
+                    "fieldname": "exchange_rate",
+                    "fieldtype": "Float",
+                    "width": 100,
+                    "hidden": 1 if filters.get("hide_column") else 0,
+                },
+                {
+                    "label": "Current Exchange Rate",
+                    "fieldname": "current_exchange_rate",
+                    "fieldtype": "Float",
+                    "width": 100,
+                    "hidden": 1 if filters.get("hide_column") else 0,
+                },
+                {
                     "label": _(f"Balance Value({presentation_currency})"),
                     "fieldname": "bal_val",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "precision": 2,
+                    "width": 100,
+                },
+                {
+                    "label": _("Curr Balance Value"),
+                    "fieldname": "current_bal_val",
                     "fieldtype": (
                         "Int" if self.filters.get("remove_precision") else "Float"
                     ),
@@ -492,6 +528,15 @@ class StockBalanceReport:
                     "width": 110,
                 },
                 {
+                    "label": _("Curr Opening Value"),
+                    "fieldname": "current_opening_val",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "precision": 2,
+                    "width": 110,
+                },
+                {
                     "label": _("In Qty"),
                     "fieldname": "in_qty",
                     "fieldtype": (
@@ -504,6 +549,15 @@ class StockBalanceReport:
                 {
                     "label": _(f"In Value({presentation_currency})"),
                     "fieldname": "in_val",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "precision": 2,
+                    "width": 80,
+                },
+                {
+                    "label": _("Curr In Value"),
+                    "fieldname": "current_in_val",
                     "fieldtype": (
                         "Int" if self.filters.get("remove_precision") else "Float"
                     ),
@@ -530,8 +584,27 @@ class StockBalanceReport:
                     "width": 80,
                 },
                 {
+                    "label": _("Curr Out Value"),
+                    "fieldname": "current_out_val",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "precision": 2,
+                    "width": 80,
+                },
+                {
                     "label": _(f"Valuation Rate({presentation_currency})"),
                     "fieldname": "val_rate",
+                    "fieldtype": (
+                        "Int" if self.filters.get("remove_precision") else "Float"
+                    ),
+                    "precision": 2,
+                    "width": 90,
+                    "convertible": "rate",
+                },
+                {
+                    "label": _("Curr Valuation Rate"),
+                    "fieldname": "current_val_rate",
                     "fieldtype": (
                         "Int" if self.filters.get("remove_precision") else "Float"
                     ),
@@ -755,3 +828,85 @@ def filter_items_with_no_transactions(
 def get_variants_attributes() -> list[str]:
     """Return all item variant attributes."""
     return frappe.get_all("Item Attribute", pluck="name")
+
+
+def _get_exchange_rate(company, posting_date):
+    today = frappe.utils.getdate()
+    company_currency = frappe.get_cached_value("Company", company, "default_currency")
+    exchange_rate = get_exchange_rate("USD", company_currency, posting_date)
+    current_exchange_rate = get_exchange_rate("USD", company_currency, today)
+    return exchange_rate, current_exchange_rate
+
+
+def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
+    date = frappe.utils.today()
+    for entry in data:
+        # Check if 'rate' and 'exchange_rate' keys exist in the entry
+        if "exchange_rate" in entry:
+            # In dollars
+            old_bal_val_in_usd = entry["bal_val"] / entry["exchange_rate"]
+
+            old_opening_val_in_usd = entry["opening_val"] / entry["exchange_rate"]
+
+            old_in_val_usd = entry["in_val"] / entry["exchange_rate"]
+
+            old_out_val_usd = entry["out_val"] / entry["exchange_rate"]
+
+            old_val_rate_usd = entry["val_rate"] / entry["exchange_rate"]
+
+            current_bal_val_chosen_currency = (
+                get_exchange_rate(from_currency, to_currency, date) * old_bal_val_in_usd
+            )
+
+            current_bal_val_in_usd = convert(
+                current_bal_val_chosen_currency, "USD", to_currency, date
+            )
+
+            current_opening_val_chosen_currency = (
+                get_exchange_rate(from_currency, to_currency, date)
+                * old_opening_val_in_usd
+            )
+
+            current_opening_val_in_usd = convert(
+                current_opening_val_chosen_currency, "USD", to_currency, date
+            )
+
+            current_in_val_chosen_currency = (
+                get_exchange_rate(from_currency, to_currency, date) * old_in_val_usd
+            )
+
+            current_in_val_in_usd = convert(
+                current_in_val_chosen_currency, "USD", to_currency, date
+            )
+
+            current_out_val_chosen_currency = (
+                get_exchange_rate(from_currency, to_currency, date) * old_out_val_usd
+            )
+
+            current_out_val_in_usd = convert(
+                current_out_val_chosen_currency, "USD", to_currency, date
+            )
+
+            current_val_rate_chosen_currency = (
+                get_exchange_rate(from_currency, to_currency, date) * old_val_rate_usd
+            )
+
+            current_val_rate_in_usd = convert(
+                current_val_rate_chosen_currency, "USD", to_currency, date
+            )
+
+            if filters.get("presentation_currency") == "USD":
+                entry["current_bal_val"] = current_bal_val_in_usd
+                entry["current_opening_val"] = current_opening_val_in_usd
+                entry["current_in_val"] = current_in_val_in_usd
+                entry["current_out_val_in"] = current_out_val_in_usd
+                entry["current_val_rate"] = current_val_rate_in_usd
+
+            else:
+                entry["current_bal_val"] = current_bal_val_chosen_currency
+                entry["current_opening_val"] = current_opening_val_chosen_currency
+                entry["current_in_val"] = current_in_val_chosen_currency
+                entry["current_out_val_in"] = current_out_val_chosen_currency
+                entry["current_val_rate"] = current_val_rate_chosen_currency
+
+    return data
