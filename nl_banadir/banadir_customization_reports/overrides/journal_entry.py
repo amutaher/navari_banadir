@@ -27,20 +27,16 @@ def on_submit(doc, method=None):
 
 def before_submit(doc, method=None):
     try:
-        payroll_entry = list(
-            set(
-                [
-                    a.reference_name
-                    for a in doc.accounts
-                    if a.reference_type == "Payroll Entry"
-                ]
-            )
-        )
+        payroll_entry_ref = None
+        for account in doc.accounts:
+            if account.reference_type == "Payroll Entry":
+                payroll_entry_ref = account.reference_name
+                break
 
-        if len(payroll_entry) > 1:
+        if not payroll_entry_ref:
             return
 
-        branch = frappe.db.get_value("Payroll Entry", payroll_entry[0], "branch")
+        branch = frappe.db.get_value("Payroll Entry", payroll_entry_ref, "branch")
 
         if branch:
             for account in doc.accounts:
