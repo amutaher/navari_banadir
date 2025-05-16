@@ -40,6 +40,11 @@ fixtures = [
                     "Sales Partner-custom_sales_partner_accounts",
                     "Sales Partner-custom_section_break_hybkd",
                     "Sales Partner-custom_commission_rate_amount",
+                    "Asset-custom_multi_currency",
+                    "Asset-custom_transaction_currency",
+                    "Asset-custom_transaction_exchange_rate",
+                    "Asset-custom_net_purchase_amounttransaction_currency",
+                    "Asset-custom_company_currency",
                 ),
             ]
         ],
