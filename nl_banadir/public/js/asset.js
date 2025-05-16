@@ -21,7 +21,6 @@ frappe.ui.form.on("Asset", {
         },
         ["exchange_rate"],
         (response) => {
-          //   locals[cdt][cdn].exchange_rate = response.exchange_rate;
           frm.doc.custom_transaction_exchange_rate = response.exchange_rate;
           frm.refresh_fields("custom_transaction_exchange_rate");
         },
@@ -56,20 +55,3 @@ frappe.ui.form.on("Asset", {
     }
   },
 });
-
-// frappe.ui.form.on('Stock Reconciliation Item', {
-
-//   custom_transaction_rate: function(frm, cdt, cdn){
-//      const child=locals[cdt][cdn]
-//       const exchangeRate = parseFloat(frm.doc.custom_transaction_exchange_rate);
-//     const transactionCurrency = child.custom_transaction_rate;
-//     if (exchangeRate && transactionCurrency) {
-//       const transactionRate =transactionCurrency * exchangeRate;
-
-//       child.valuation_rate = transactionRate;
-
-//       frm.refresh_fields("items");
-//   }
-
-//   }
-// })
