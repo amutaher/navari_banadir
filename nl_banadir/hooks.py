@@ -40,6 +40,11 @@ fixtures = [
                     "Sales Partner-custom_sales_partner_accounts",
                     "Sales Partner-custom_section_break_hybkd",
                     "Sales Partner-custom_commission_rate_amount",
+                    "Asset-custom_multi_currency",
+                    "Asset-custom_transaction_currency",
+                    "Asset-custom_transaction_exchange_rate",
+                    "Asset-custom_net_purchase_amounttransaction_currency",
+                    "Asset-custom_company_currency",
                 ),
             ]
         ],
@@ -146,6 +151,7 @@ doctype_js = {
     "Process Statement Of Accounts": "public/js/process_statement_of_accounts.js",
     "Stock Entry": "public/js/stock_entry.js",
     "Journal Entry": "public/js/journal_entry.js",
+    "Asset": "public/js/asset.js",
 }
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
