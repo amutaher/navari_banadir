@@ -4,6 +4,7 @@
 # import frappe
 
 from itertools import chain
+from erpnext.setup.utils import get_exchange_rate
 
 import frappe
 from frappe import _
@@ -19,14 +20,19 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
 from erpnext import get_company_currency
 
-from erpnext.accounts.report.utils import convert, get_rate_as_at
-from nl_banadir.banadir_customization_reports.report.utils import format_in_lakhs
+from erpnext.accounts.report.utils import convert
 
 
 def execute(filters=None):
     filters = frappe._dict(filters or {})
     columns = get_columns(filters)
     data = get_data(filters)
+    for row in data:
+        row["currency"] = filters.get(
+            "presentation_currency"
+        ) or frappe.get_cached_value("Company", filters.company, "default_currency")
+        row["exchange_rate"] = get_currency_exchange_rate(filters)
+
     chart = (
         prepare_chart_data(data, filters)
         if filters.get("group_by") not in ("Asset Category", "Location")
@@ -114,7 +120,7 @@ def get_data(filters):
     depreciation_amount_map = get_asset_depreciation_amount_map(filters, finance_book)
 
     group_by = frappe.scrub(filters.get("group_by"))
-
+    # frappe.throw(str(exchange_rate))
     if group_by in ("asset_category", "location"):
         data = get_group_by_data(
             group_by, conditions, assets_linked_to_fb, depreciation_amount_map
@@ -149,7 +155,7 @@ def get_data(filters):
                     filters.get("currency_exchange_date"),
                 )
                 row["exchange_rate"] = exchange_rate
-        data = convert_in_lakhs(data, filters)
+
         return data
     fields = [
         "name as asset_id",
@@ -231,7 +237,7 @@ def get_data(filters):
             "company": asset.company,
         }
         data.append(row)
-    data = convert_in_lakhs(data, filters)
+    # data = convert_in_lakhs(data, filters)
     return data
 
 
@@ -518,8 +524,19 @@ def get_columns(filters):
             {
                 "label": _(f"Gross Purchase Amount({presentation_currency})"),
                 "fieldname": "gross_purchase_amount",
-                "fieldtype": "Data",
-                "precision": 2,
+                # "fieldtype": "Data",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
+                "width": 250,
+            },
+            {
+                "label": _("Curr Gross Purchase Amount"),
+                "fieldname": "current_gross_purchase_amount",
+                # "fieldtype": "Data",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 250,
             },
             {
@@ -527,21 +544,53 @@ def get_columns(filters):
                     f"Opening Accumulated Depreciation({presentation_currency})"
                 ),
                 "fieldname": "opening_accumulated_depreciation",
-                "fieldtype": "Float",
-                "precision": 2,
+                # "fieldtype": "Float",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
+                "width": 250,
+            },
+            {
+                "label": _("Curr Opening Accumulated Depreciation"),
+                "fieldname": "current_opening_accumulated_depreciation",
+                # "fieldtype": "Float",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 250,
             },
             {
                 "label": _(f"Depreciated Amount({presentation_currency})"),
                 "fieldname": "depreciated_amount",
-                "fieldtype": "Float",
+                # "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": "currency",
+                "width": 250,
+            },
+            {
+                "label": _("Curr Depreciated Amount"),
+                "fieldname": "current_depreciated_amount",
+                # "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 250,
             },
             {
                 "label": _(f"Asset Value({presentation_currency})"),
                 "fieldname": "asset_value",
-                "fieldtype": "Float",
-                "precision": 2,
+                # "fieldtype": "Float",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
+                "width": 250,
+            },
+            {
+                "label": _("Curr Asset Value"),
+                "fieldname": "current_asset_value",
+                # "fieldtype": "Float",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 250,
             },
             {
@@ -549,6 +598,13 @@ def get_columns(filters):
                 "fieldname": "company",
                 "fieldtype": "Link",
                 "options": "Company",
+                "width": 120,
+            },
+            {
+                "label": _("Currency"),
+                "fieldname": "currency",
+                "fieldtype": "Link",
+                "options": "Currency",
                 "width": 120,
             },
         ]
@@ -598,29 +654,73 @@ def get_columns(filters):
         {
             "label": _(f"Gross Purchase Amount({presentation_currency})"),
             "fieldname": "gross_purchase_amount",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
+            "width": 100,
+        },
+        {
+            "label": _("Gross Purchase Amount"),
+            "fieldname": "current_gross_purchase_amount",
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
             "label": _(f"Asset Value({presentation_currency})"),
             "fieldname": "asset_value",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
+            "width": 100,
+        },
+        {
+            "label": _("Asset Value"),
+            "fieldname": "current_asset_value",
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
             "label": _(f"Opening Accumulated Depreciation({presentation_currency})"),
             "fieldname": "opening_accumulated_depreciation",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
+            "width": 90,
+        },
+        {
+            "label": _("Curr Opening Accumulated Depreciation"),
+            "fieldname": "current_opening_accumulated_depreciation",
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 90,
         },
         {
             "label": _(f"Depreciated Amount({presentation_currency})"),
             "fieldname": "depreciated_amount",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
+            "width": 100,
+        },
+        {
+            "label": _("Curr Depreciated Amount"),
+            "fieldname": "current_depreciated_amount",
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
@@ -669,21 +769,7 @@ def get_currency_exchange_rate(filters):
     company_currency = frappe.get_cached_value(
         "Company", filters.company, "default_currency"
     )
-    rate = get_rate_as_at(date, company_currency, presentation_currency)
-    return rate
-
-
-def convert_in_lakhs(data, filters):
-    presentation_currency = filters.get(
-        "presentation_currency"
-    ) or frappe.get_cached_value("Company", filters.company, "default_currency")
-    is_inr = True if presentation_currency == "INR" else False
-    if is_inr:
-        for row in data:
-            row["gross_purchase_amount"] = format_in_lakhs(row["gross_purchase_amount"])
-            row["opening_accumulated_depreciation"] = format_in_lakhs(
-                row["opening_accumulated_depreciation"]
-            )
-            row["depreciated_amount"] = format_in_lakhs(row["depreciated_amount"])
-            row["asset_value"] = format_in_lakhs(row["asset_value"])
-        return data
+    exchange_rate = (
+        get_exchange_rate(presentation_currency, company_currency, date) or 1.0
+    )
+    return exchange_rate
