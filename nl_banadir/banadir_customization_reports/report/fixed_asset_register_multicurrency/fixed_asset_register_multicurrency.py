@@ -21,7 +21,6 @@ from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciatio
 from erpnext import get_company_currency
 
 from erpnext.accounts.report.utils import convert
-from nl_banadir.banadir_customization_reports.report.utils import format_in_lakhs
 
 
 def execute(filters=None):
@@ -32,6 +31,7 @@ def execute(filters=None):
         row["currency"] = filters.get(
             "presentation_currency"
         ) or frappe.get_cached_value("Company", filters.company, "default_currency")
+        row["exchange_rate"] = get_currency_exchange_rate(filters)
 
     chart = (
         prepare_chart_data(data, filters)
@@ -120,7 +120,7 @@ def get_data(filters):
     depreciation_amount_map = get_asset_depreciation_amount_map(filters, finance_book)
 
     group_by = frappe.scrub(filters.get("group_by"))
-
+    # frappe.throw(str(exchange_rate))
     if group_by in ("asset_category", "location"):
         data = get_group_by_data(
             group_by, conditions, assets_linked_to_fb, depreciation_amount_map
@@ -155,8 +155,7 @@ def get_data(filters):
                     filters.get("currency_exchange_date"),
                 )
                 row["exchange_rate"] = exchange_rate
-        # data = convert_in_lakhs(data, filters)
-        # frappe.throw(str(data))
+
         return data
     fields = [
         "name as asset_id",
@@ -699,24 +698,7 @@ def get_currency_exchange_rate(filters):
     company_currency = frappe.get_cached_value(
         "Company", filters.company, "default_currency"
     )
-    # rate = get_rate_as_at(date, company_currency, presentation_currency)
-    # frappe.throw(str(rate))
-    exchange_rate = get_exchange_rate(company_currency, presentation_currency, date)
-    # frappe.throw(str(exchange_rate))
+    exchange_rate = (
+        get_exchange_rate(presentation_currency, company_currency, date) or 1.0
+    )
     return exchange_rate
-
-
-def convert_in_lakhs(data, filters):
-    presentation_currency = filters.get(
-        "presentation_currency"
-    ) or frappe.get_cached_value("Company", filters.company, "default_currency")
-    is_inr = True if presentation_currency == "INR" else False
-    if is_inr:
-        for row in data:
-            row["gross_purchase_amount"] = format_in_lakhs(row["gross_purchase_amount"])
-            row["opening_accumulated_depreciation"] = format_in_lakhs(
-                row["opening_accumulated_depreciation"]
-            )
-            row["depreciated_amount"] = format_in_lakhs(row["depreciated_amount"])
-            row["asset_value"] = format_in_lakhs(row["asset_value"])
-        return data
