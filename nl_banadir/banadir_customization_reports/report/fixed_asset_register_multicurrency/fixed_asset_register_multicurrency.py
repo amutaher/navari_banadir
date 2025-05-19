@@ -4,6 +4,7 @@
 # import frappe
 
 from itertools import chain
+from erpnext.setup.utils import get_exchange_rate
 
 import frappe
 from frappe import _
@@ -19,7 +20,7 @@ from erpnext.accounts.utils import get_fiscal_year
 from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
 from erpnext import get_company_currency
 
-from erpnext.accounts.report.utils import convert, get_rate_as_at
+from erpnext.accounts.report.utils import convert
 from nl_banadir.banadir_customization_reports.report.utils import format_in_lakhs
 
 
@@ -27,6 +28,11 @@ def execute(filters=None):
     filters = frappe._dict(filters or {})
     columns = get_columns(filters)
     data = get_data(filters)
+    for row in data:
+        row["currency"] = filters.get(
+            "presentation_currency"
+        ) or frappe.get_cached_value("Company", filters.company, "default_currency")
+
     chart = (
         prepare_chart_data(data, filters)
         if filters.get("group_by") not in ("Asset Category", "Location")
@@ -149,7 +155,8 @@ def get_data(filters):
                     filters.get("currency_exchange_date"),
                 )
                 row["exchange_rate"] = exchange_rate
-        data = convert_in_lakhs(data, filters)
+        # data = convert_in_lakhs(data, filters)
+        # frappe.throw(str(data))
         return data
     fields = [
         "name as asset_id",
@@ -231,7 +238,7 @@ def get_data(filters):
             "company": asset.company,
         }
         data.append(row)
-    data = convert_in_lakhs(data, filters)
+    # data = convert_in_lakhs(data, filters)
     return data
 
 
@@ -518,8 +525,10 @@ def get_columns(filters):
             {
                 "label": _(f"Gross Purchase Amount({presentation_currency})"),
                 "fieldname": "gross_purchase_amount",
-                "fieldtype": "Data",
-                "precision": 2,
+                # "fieldtype": "Data",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 250,
             },
             {
@@ -527,21 +536,27 @@ def get_columns(filters):
                     f"Opening Accumulated Depreciation({presentation_currency})"
                 ),
                 "fieldname": "opening_accumulated_depreciation",
-                "fieldtype": "Float",
-                "precision": 2,
+                # "fieldtype": "Float",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 250,
             },
             {
                 "label": _(f"Depreciated Amount({presentation_currency})"),
                 "fieldname": "depreciated_amount",
-                "fieldtype": "Float",
+                # "fieldtype": "Float",
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 250,
             },
             {
                 "label": _(f"Asset Value({presentation_currency})"),
                 "fieldname": "asset_value",
-                "fieldtype": "Float",
-                "precision": 2,
+                # "fieldtype": "Float",
+                # "precision": 2,
+                "fieldtype": "Currency",
+                "options": "currency",
                 "width": 250,
             },
             {
@@ -549,6 +564,13 @@ def get_columns(filters):
                 "fieldname": "company",
                 "fieldtype": "Link",
                 "options": "Company",
+                "width": 120,
+            },
+            {
+                "label": _("Currency"),
+                "fieldname": "currency",
+                "fieldtype": "Link",
+                "options": "Currency",
                 "width": 120,
             },
         ]
@@ -598,29 +620,37 @@ def get_columns(filters):
         {
             "label": _(f"Gross Purchase Amount({presentation_currency})"),
             "fieldname": "gross_purchase_amount",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
             "label": _(f"Asset Value({presentation_currency})"),
             "fieldname": "asset_value",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
             "label": _(f"Opening Accumulated Depreciation({presentation_currency})"),
             "fieldname": "opening_accumulated_depreciation",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 90,
         },
         {
             "label": _(f"Depreciated Amount({presentation_currency})"),
             "fieldname": "depreciated_amount",
-            "fieldtype": "Float",
-            "precision": 2,
+            # "fieldtype": "Float",
+            # "precision": 2,
+            "fieldtype": "Currency",
+            "options": "currency",
             "width": 100,
         },
         {
@@ -669,8 +699,11 @@ def get_currency_exchange_rate(filters):
     company_currency = frappe.get_cached_value(
         "Company", filters.company, "default_currency"
     )
-    rate = get_rate_as_at(date, company_currency, presentation_currency)
-    return rate
+    # rate = get_rate_as_at(date, company_currency, presentation_currency)
+    # frappe.throw(str(rate))
+    exchange_rate = get_exchange_rate(company_currency, presentation_currency, date)
+    # frappe.throw(str(exchange_rate))
+    return exchange_rate
 
 
 def convert_in_lakhs(data, filters):
