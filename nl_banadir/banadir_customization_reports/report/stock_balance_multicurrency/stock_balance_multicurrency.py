@@ -79,19 +79,22 @@ class StockBalanceReport:
         self.prepare_new_data()
         presentation_currency = self.filters.get(
             "presentation_currency"
-        ) or frappe.get_cached_value("Company", self.filters.get("company"))
+        ) or frappe.get_cached_value(
+            "Company", self.filters.get("company"), "default_currency"
+        )
         if not self.columns:
             self.columns = self.get_columns(self.filters)
 
         self.add_additional_uom_columns()
-        self.data = self.convert_currency_fields(self.data, self.filters)
         for row in self.data:
             row["exchange_rate"], row["current_exchange_rate"] = _get_exchange_rate(
                 self.filters.get("company"), row.get("posting_date")
             )
+            row["currency"] = presentation_currency
         self.data = convert_as_per_current_exchange_rate(
             self.data, self.filters, "USD", presentation_currency
         )
+        self.data = self.convert_currency_fields(self.data, self.filters)
 
         return self.columns, self.data
 
@@ -493,19 +496,27 @@ class StockBalanceReport:
                 {
                     "label": _(f"Balance Value({presentation_currency})"),
                     "fieldname": "bal_val",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
+                    # "precision": 2,
                     "width": 100,
                 },
                 {
                     "label": _("Curr Balance Value"),
                     "fieldname": "current_bal_val",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 100,
                 },
                 {
@@ -521,19 +532,27 @@ class StockBalanceReport:
                 {
                     "label": _(f"Opening Value({presentation_currency})"),
                     "fieldname": "opening_val",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 110,
                 },
                 {
                     "label": _("Curr Opening Value"),
                     "fieldname": "current_opening_val",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 110,
                 },
                 {
@@ -543,25 +562,35 @@ class StockBalanceReport:
                         "Int" if self.filters.get("remove_precision") else "Float"
                     ),
                     "precision": 2,
+                    # "fieldtype": "Int" if self.filters.get("remove_precision") else "Currency",
+                    # "options": "currency",
                     "width": 80,
                     "convertible": "qty",
                 },
                 {
                     "label": _(f"In Value({presentation_currency})"),
                     "fieldname": "in_val",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 80,
                 },
                 {
                     "label": _("Curr In Value"),
                     "fieldname": "current_in_val",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 80,
                 },
                 {
@@ -577,38 +606,54 @@ class StockBalanceReport:
                 {
                     "label": _(f"Out Value({presentation_currency})"),
                     "fieldname": "out_val",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 80,
                 },
                 {
                     "label": _("Curr Out Value"),
                     "fieldname": "current_out_val",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 80,
                 },
                 {
                     "label": _(f"Valuation Rate({presentation_currency})"),
                     "fieldname": "val_rate",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 90,
                     "convertible": "rate",
                 },
                 {
                     "label": _("Curr Valuation Rate"),
                     "fieldname": "current_val_rate",
-                    "fieldtype": (
-                        "Int" if self.filters.get("remove_precision") else "Float"
-                    ),
-                    "precision": 2,
+                    # "fieldtype": (
+                    #     "Int" if self.filters.get("remove_precision") else "Float"
+                    # ),
+                    # "precision": 2,
+                    "fieldtype": "Int"
+                    if self.filters.get("remove_precision")
+                    else "Currency",
+                    "options": "currency",
                     "width": 90,
                     "convertible": "rate",
                 },
@@ -627,6 +672,13 @@ class StockBalanceReport:
                     "fieldname": "company",
                     "fieldtype": "Link",
                     "options": "Company",
+                    "width": 100,
+                },
+                {
+                    "label": _("Currency"),
+                    "fieldname": "currency",
+                    "fieldtype": "Link",
+                    "options": "Currency",
                     "width": 100,
                 },
             ]
@@ -845,7 +897,7 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
         if "exchange_rate" in entry:
             # In dollars
             old_bal_val_in_usd = entry["bal_val"] / entry["exchange_rate"]
-
+            # frappe.throw(str(entry["bal_val"]))
             old_opening_val_in_usd = entry["opening_val"] / entry["exchange_rate"]
 
             old_in_val_usd = entry["in_val"] / entry["exchange_rate"]
@@ -857,7 +909,7 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
             current_bal_val_chosen_currency = (
                 get_exchange_rate(from_currency, to_currency, date) * old_bal_val_in_usd
             )
-
+            # frappe.throw(str(old_out_val_usd))
             current_bal_val_in_usd = convert(
                 current_bal_val_chosen_currency, "USD", to_currency, date
             )
@@ -886,7 +938,7 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
             current_out_val_in_usd = convert(
                 current_out_val_chosen_currency, "USD", to_currency, date
             )
-
+            # frappe.throw(str(current_out_val_in_usd))
             current_val_rate_chosen_currency = (
                 get_exchange_rate(from_currency, to_currency, date) * old_val_rate_usd
             )
@@ -899,7 +951,7 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
                 entry["current_bal_val"] = current_bal_val_in_usd
                 entry["current_opening_val"] = current_opening_val_in_usd
                 entry["current_in_val"] = current_in_val_in_usd
-                entry["current_out_val_in"] = current_out_val_in_usd
+                entry["current_out_val"] = current_out_val_in_usd
                 entry["current_val_rate"] = current_val_rate_in_usd
 
             else:
