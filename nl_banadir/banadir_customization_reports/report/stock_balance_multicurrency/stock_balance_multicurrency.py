@@ -86,9 +86,10 @@ class StockBalanceReport:
             self.columns = self.get_columns(self.filters)
 
         self.add_additional_uom_columns()
+        # frappe.throw(str(self.data))
         for row in self.data:
             row["exchange_rate"], row["current_exchange_rate"] = _get_exchange_rate(
-                self.filters.get("company"), row.get("posting_date")
+                self.filters.get("company"), self.filters.get("from_date")
             )
             row["currency"] = presentation_currency
         self.data = convert_as_per_current_exchange_rate(
@@ -885,8 +886,9 @@ def get_variants_attributes() -> list[str]:
 def _get_exchange_rate(company, posting_date):
     today = frappe.utils.getdate()
     company_currency = frappe.get_cached_value("Company", company, "default_currency")
-    exchange_rate = get_exchange_rate("USD", company_currency, posting_date)
-    current_exchange_rate = get_exchange_rate("USD", company_currency, today)
+    exchange_rate = get_exchange_rate("USD", company_currency, posting_date) or 1.0
+    current_exchange_rate = get_exchange_rate("USD", company_currency, today) or 1.0
+
     return exchange_rate, current_exchange_rate
 
 
