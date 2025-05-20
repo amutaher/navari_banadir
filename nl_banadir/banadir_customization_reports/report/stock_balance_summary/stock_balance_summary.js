@@ -145,14 +145,9 @@ frappe.query_reports["Stock Balance Summary"] = {
     value = default_formatter(value, row, column, data);
 
     if (data && data.bal_qty > 0) {
-      // Check if the column fieldname contains 'bal_qty'
       if (column.fieldname.includes("qty")) {
-        // Format the value with thousand separators
-        // Split the value into integer and decimal parts
         let [integerPart, decimalPart] = value.toString().split(".");
-        // Add comma formatting to the integer part only
         integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        // Recombine integer and decimal parts
         value = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
       }
     }
@@ -171,13 +166,9 @@ frappe.query_reports["Stock Balance Summary"] = {
       frappe.query_report.get_filter_value("remove_precision");
 
     if (remove_precision === 1 && data && data.bal_qty > 0) {
-      // Check if the column fieldname contains 'bal_qty'
       if (column.fieldname.includes("bal_qty")) {
-        // Split the value into integer and decimal parts
         let [integerPart, decimalPart] = value.toString().split(".");
-        // Add comma formatting to the integer part only
         integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        // Recombine integer and decimal parts
         value = decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
       }
     }

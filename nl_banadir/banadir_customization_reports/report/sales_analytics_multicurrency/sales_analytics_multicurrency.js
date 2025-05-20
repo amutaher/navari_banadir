@@ -15,6 +15,8 @@ frappe.query_reports["Sales Analytics Multicurrency"] = {
         "Territory",
         "Order Type",
         "Project",
+        "Marka",
+        "Company Group",
       ],
       default: "Customer",
       reqd: 1,

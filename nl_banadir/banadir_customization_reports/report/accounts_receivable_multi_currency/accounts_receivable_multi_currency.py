@@ -69,6 +69,7 @@ class ReceivablePayableReport:
         self.get_columns()
         self.get_data()
         self.get_chart_data()
+        # frappe.throw(str(self.data))
         return self.columns, self.data, None, self.chart, None, self.skip_total_row
 
     def set_defaults(self):
@@ -302,6 +303,14 @@ class ReceivablePayableReport:
         sub_total_row = self.total_row_map.get(party)
 
         if sub_total_row:
+            if self.filters.get("show_only_due"):
+                has_due_records = any(
+                    row.get("is_due", False) and row.get("party") == party
+                    for row in self.data
+                )
+                if not has_due_records:
+                    return
+
             self.data.append(sub_total_row)
             self.data.append({})
             self.update_sub_total_row(sub_total_row, "Total")
@@ -341,6 +350,9 @@ class ReceivablePayableReport:
 
             if must_consider:
                 # non-zero oustanding, we must consider this row
+                # Skip rows that are not due if show_only_due is enabled
+                if self.filters.get("show_only_due") and row.get("is_due") is False:
+                    continue
 
                 if self.is_invoice(row) and self.filters.based_on_payment_terms:
                     # is an invoice, allocate based on fifo
@@ -351,6 +363,12 @@ class ReceivablePayableReport:
                         # make separate rows for each payment term
                         for d in row.payment_terms:
                             if d.outstanding > 0:
+                                # Apply show_only_due filter to payment term rows
+                                if (
+                                    self.filters.get("show_only_due")
+                                    and row.get("is_due") is False
+                                ):
+                                    continue
                                 self.append_row(d)
 
                         # if there is overpayment, add another row
@@ -363,7 +381,11 @@ class ReceivablePayableReport:
         if self.filters.get("group_by_party"):
             self.append_subtotal_row(self.previous_party)
             if self.data:
-                self.data.append(self.total_row_map.get("Total", {}))
+                # Only append grand total if there are due records
+                if not self.filters.get("show_only_due") or any(
+                    row.get("is_due", False) for row in self.data
+                ):
+                    self.data.append(self.total_row_map.get("Total", {}))
 
         """
         Function to convert the currencies if filter is defined
@@ -465,6 +487,9 @@ class ReceivablePayableReport:
             if self.previous_party and (self.previous_party != row.party):
                 self.append_subtotal_row(self.previous_party)
             self.previous_party = row.party
+
+        if self.filters.get("show_only_due") and row.get("is_due") is False:
+            return
 
         self.data.append(row)
 
@@ -648,6 +673,12 @@ class ReceivablePayableReport:
         else:
             invoiced = d.base_payment_amount
 
+        term_is_due = (
+            getdate(d.due_date) <= getdate(self.filters.report_date)
+            if d.due_date
+            else row.get("is_due", False)
+        )
+
         row.payment_terms.append(
             term.update(
                 {
@@ -658,6 +689,7 @@ class ReceivablePayableReport:
                     "paid": d.paid_amount + d.discounted_amount,
                     "credit_note": 0.0,
                     "outstanding": invoiced - d.paid_amount - d.discounted_amount,
+                    "is_due": term_is_due,
                 }
             )
         )
@@ -867,6 +899,9 @@ class ReceivablePayableReport:
         # ageing buckets should not have amounts if due date is not reached
         if getdate(entry_date) > getdate(self.filters.report_date):
             row.range1 = row.range2 = row.range3 = row.range4 = row.range5 = 0.0
+            row.is_due = False  # Flag to indicate if invoice is due not due if entry_date is in the future
+        else:
+            row.is_due = True
 
         row.total_due = row.range1 + row.range2 + row.range3 + row.range4 + row.range5
 

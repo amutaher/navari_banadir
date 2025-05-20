@@ -121,6 +121,11 @@ frappe.query_reports["Accounts Payable Summary MultiCurrency"] = {
       fieldtype: "Check",
     },
     {
+      fieldname: "in_party_currency",
+      label: __("In Party Currency"),
+      fieldtype: "Check",
+    },
+    {
       fieldname: "presentation_currency",
       label: __("Currency"),
       fieldtype: "Select",
