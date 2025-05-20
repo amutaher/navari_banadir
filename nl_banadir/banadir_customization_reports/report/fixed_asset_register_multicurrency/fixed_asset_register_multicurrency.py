@@ -27,12 +27,13 @@ def execute(filters=None):
     filters = frappe._dict(filters or {})
     columns = get_columns(filters)
     data = get_data(filters)
+
     for row in data:
         row["currency"] = filters.get(
             "presentation_currency"
         ) or frappe.get_cached_value("Company", filters.company, "default_currency")
         row["exchange_rate"] = get_currency_exchange_rate(filters)
-
+    # data = convert_as_per_current_exchange_rate(data, filters, "USD", filters.get("presentation_currency"))
     chart = (
         prepare_chart_data(data, filters)
         if filters.get("group_by") not in ("Asset Category", "Location")
@@ -100,6 +101,7 @@ def get_data(filters):
     data = []
     company_currency = get_company_currency(filters.company)
     conditions = get_conditions(filters)
+    # frappe.throw(str(conditions))
     pr_supplier_map = get_purchase_receipt_supplier_map()
     pi_supplier_map = get_purchase_invoice_supplier_map()
     exchange_rate = get_currency_exchange_rate(filters)
@@ -195,7 +197,7 @@ def get_data(filters):
             asset["gross_purchase_amount"] = convert(
                 asset.gross_purchase_amount,
                 asset.company_currency,
-                conditions["presentation_currency"],
+                filters.get("presentation_currency"),
                 filters.get("currency_exchange_date"),
             )
             asset_value = convert(
@@ -248,10 +250,13 @@ def prepare_chart_data(data, filters):
     if filters.filter_based_on not in ("Date Range", "Fiscal Year"):
         filters_filter_based_on = "Date Range"
         date_field = "purchase_date"
-        filtered_data = [d for d in data if not d.get(date_field)]
+        filtered_data = [d for d in data if d.get(date_field)]
+        # frappe.throw(str(filtered_data))
+
         filters_from_date = min(filtered_data, key=lambda a: a.get(date_field)).get(
             date_field
         )
+
         filters_to_date = max(filtered_data, key=lambda a: a.get(date_field)).get(
             date_field
         )
@@ -278,13 +283,14 @@ def prepare_chart_data(data, filters):
         )
 
     for d in data:
-        date = d.get(date_field)
-        belongs_to_month = formatdate(date, "MMM YYYY")
+        if d.get(date_field):
+            date = d.get(date_field)
+            belongs_to_month = formatdate(date, "MMM YYYY")
 
-        labels_values_map[belongs_to_month].asset_value += d.get("asset_value")
-        labels_values_map[belongs_to_month].depreciated_amount += d.get(
-            "depreciated_amount"
-        )
+            labels_values_map[belongs_to_month].asset_value += d.get("asset_value")
+            labels_values_map[belongs_to_month].depreciated_amount += d.get(
+                "depreciated_amount"
+            )
 
     return {
         "data": {
@@ -661,7 +667,7 @@ def get_columns(filters):
             "width": 100,
         },
         {
-            "label": _("Gross Purchase Amount"),
+            "label": _("Curr Gross Purchase Amount"),
             "fieldname": "current_gross_purchase_amount",
             # "fieldtype": "Float",
             # "precision": 2,
@@ -679,7 +685,7 @@ def get_columns(filters):
             "width": 100,
         },
         {
-            "label": _("Asset Value"),
+            "label": _("Curr Asset Value"),
             "fieldname": "current_asset_value",
             # "fieldtype": "Float",
             # "precision": 2,
@@ -773,3 +779,75 @@ def get_currency_exchange_rate(filters):
         get_exchange_rate(presentation_currency, company_currency, date) or 1.0
     )
     return exchange_rate
+
+
+def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
+    date = frappe.utils.today()
+    for entry in data:
+        if "exchange_rate" in entry:
+            # Avoid division by None or zero
+            exchange_rate = entry.get("exchange_rate") or 1
+
+            old_gross_purchase_amount_in_usd = (
+                entry["gross_purchase_amount"] / exchange_rate
+            )
+            old_opening_accumulated_depreciation_in_usd = (
+                entry["opening_accumulated_depreciation"] / exchange_rate
+            )
+            old_depreciated_amount_usd = entry["depreciated_amount"] / exchange_rate
+            old_asset_value_usd = entry["asset_value"] / exchange_rate
+
+            # Safely get exchange rate with default fallback
+            rate = get_exchange_rate(from_currency, to_currency, date) or 1
+
+            current_gross_purchase_amount_chosen_currency = (
+                rate * old_gross_purchase_amount_in_usd
+            )
+            current_gross_purchase_amount_in_usd = convert(
+                current_gross_purchase_amount_chosen_currency, "USD", to_currency, date
+            )
+
+            current_opening_accumulated_depreciation_chosen_currency = (
+                rate * old_opening_accumulated_depreciation_in_usd
+            )
+            current_opening_accumulated_depreciation_in_usd = convert(
+                current_opening_accumulated_depreciation_chosen_currency,
+                "USD",
+                to_currency,
+                date,
+            )
+
+            current_depreciated_amount_chosen_currency = (
+                rate * old_depreciated_amount_usd
+            )
+            current_depreciated_amount_in_usd = convert(
+                current_depreciated_amount_chosen_currency, "USD", to_currency, date
+            )
+
+            current_asset_value_chosen_currency = rate * old_asset_value_usd
+            current_asset_value_in_usd = convert(
+                current_asset_value_chosen_currency, "USD", to_currency, date
+            )
+
+            if filters.get("presentation_currency") == "USD":
+                entry["current_gross_purchase_amount"] = (
+                    current_gross_purchase_amount_in_usd
+                )
+                entry["current_opening_accumulated_depreciation"] = (
+                    current_opening_accumulated_depreciation_in_usd
+                )
+                entry["current_depreciated_amount"] = current_depreciated_amount_in_usd
+                entry["current_asset_value"] = current_asset_value_in_usd
+            else:
+                entry["current_gross_purchase_amount"] = (
+                    current_gross_purchase_amount_chosen_currency
+                )
+                entry["current_opening_accumulated_depreciation"] = (
+                    current_opening_accumulated_depreciation_chosen_currency
+                )
+                entry["current_depreciated_amount"] = (
+                    current_depreciated_amount_chosen_currency
+                )
+                entry["current_asset_value"] = current_asset_value_chosen_currency
+
+    return data
