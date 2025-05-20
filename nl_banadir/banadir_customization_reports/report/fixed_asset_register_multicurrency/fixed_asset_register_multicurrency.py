@@ -127,6 +127,10 @@ def get_data(filters):
         data = get_group_by_data(
             group_by, conditions, assets_linked_to_fb, depreciation_amount_map
         )
+        data = convert_as_per_current_exchange_rate(
+            data, filters, "USD", filters.get("presentation_currency")
+        )
+
         if filters.get("presentation_currency"):
             for row in data:
                 # conversion_date = frappe.utils.getdate(
@@ -178,7 +182,13 @@ def get_data(filters):
     ]
 
     assets_record = frappe.db.get_all("Asset", filters=conditions, fields=fields)
+    for asst in assets_record:
+        asst["exchange_rate"] = exchange_rate
 
+    assets_record = convert_as_per_current_exchange_rate(
+        assets_record, filters, "USD", filters.get("presentation_currency")
+    )
+    # frappe.throw(str(assets_record))
     for asset in assets_record:
         if (
             assets_linked_to_fb
@@ -190,32 +200,32 @@ def get_data(filters):
         asset_value = get_asset_value_after_depreciation(
             asset.asset_id, finance_book
         ) or get_asset_value_after_depreciation(asset.asset_id)
-
         # Convert currency if presentation currency is set
         if filters.get("presentation_currency"):
             # conversion_date = frappe.utils.getdate(asset.purchase_date)
             asset["gross_purchase_amount"] = convert(
                 asset.gross_purchase_amount,
-                asset.company_currency,
                 filters.get("presentation_currency"),
+                company_currency,
                 filters.get("currency_exchange_date"),
             )
+            # frappe.throw(str(company_currency))
             asset_value = convert(
                 asset_value,
-                asset.company_currency,
                 filters.presentation_currency,
+                company_currency,
                 filters.get("currency_exchange_date"),
             )
             asset["opening_accumulated_depreciation"] = convert(
                 asset.opening_accumulated_depreciation,
-                asset.company_currency,
                 filters.presentation_currency,
+                company_currency,
                 filters.get("currency_exchange_date"),
             )
             depreciation_amount_map[asset.asset_id] = convert(
                 depreciation_amount_map.get(asset.asset_id, 0.0),
-                asset.company_currency,
                 filters.presentation_currency,
+                company_currency,
                 filters.get("currency_exchange_date"),
             )
             asset["exchange_rate"] = exchange_rate
@@ -237,6 +247,10 @@ def get_data(filters):
             "purchase_date": asset.purchase_date,
             "asset_value": asset_value,
             "company": asset.company,
+            "current_gross_purchase_amount": asset.current_gross_purchase_amount,
+            "current_opening_accumulated_depreciation": asset.current_opening_accumulated_depreciation,
+            "current_depreciated_amount": asset.current_depreciated_amount,
+            "current_asset_value": asset.current_asset_value,
         }
         data.append(row)
     # data = convert_in_lakhs(data, filters)
@@ -783,71 +797,50 @@ def get_currency_exchange_rate(filters):
 
 def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
     date = frappe.utils.today()
-    for entry in data:
-        if "exchange_rate" in entry:
-            # Avoid division by None or zero
-            exchange_rate = entry.get("exchange_rate") or 1
 
+    for entry in data:
+        if "exchange_rate" not in entry:
+            continue  # Skip entries without exchange rate
+
+        exchange_rate = entry.get("exchange_rate") or 1
+
+        rate = get_exchange_rate(from_currency, to_currency, date) or 1
+
+        # Process each field only if it exists in the entry
+        if "gross_purchase_amount" in entry:
             old_gross_purchase_amount_in_usd = (
                 entry["gross_purchase_amount"] / exchange_rate
             )
+            converted = rate * old_gross_purchase_amount_in_usd
+            entry["current_gross_purchase_amount"] = (
+                convert(converted, "USD", to_currency, date)
+                if filters.get("presentation_currency") == "USD"
+                else converted
+            )
+
+        if "opening_accumulated_depreciation" in entry:
             old_opening_accumulated_depreciation_in_usd = (
                 entry["opening_accumulated_depreciation"] / exchange_rate
             )
+            converted = rate * old_opening_accumulated_depreciation_in_usd
+            entry["current_opening_accumulated_depreciation"] = (
+                convert(converted, "USD", to_currency, date)
+                if filters.get("presentation_currency") == "USD"
+                else converted
+            )
+
+        if "depreciated_amount" in entry:
             old_depreciated_amount_usd = entry["depreciated_amount"] / exchange_rate
+            converted = rate * old_depreciated_amount_usd
+            if filters.get("presentation_currency") != "USD":
+                entry["current_depreciated_amount"] = converted
+
+        if "asset_value" in entry:
             old_asset_value_usd = entry["asset_value"] / exchange_rate
-
-            # Safely get exchange rate with default fallback
-            rate = get_exchange_rate(from_currency, to_currency, date) or 1
-
-            current_gross_purchase_amount_chosen_currency = (
-                rate * old_gross_purchase_amount_in_usd
+            converted = rate * old_asset_value_usd
+            entry["current_asset_value"] = (
+                convert(converted, "USD", to_currency, date)
+                if filters.get("presentation_currency") == "USD"
+                else converted
             )
-            current_gross_purchase_amount_in_usd = convert(
-                current_gross_purchase_amount_chosen_currency, "USD", to_currency, date
-            )
-
-            current_opening_accumulated_depreciation_chosen_currency = (
-                rate * old_opening_accumulated_depreciation_in_usd
-            )
-            current_opening_accumulated_depreciation_in_usd = convert(
-                current_opening_accumulated_depreciation_chosen_currency,
-                "USD",
-                to_currency,
-                date,
-            )
-
-            current_depreciated_amount_chosen_currency = (
-                rate * old_depreciated_amount_usd
-            )
-            current_depreciated_amount_in_usd = convert(
-                current_depreciated_amount_chosen_currency, "USD", to_currency, date
-            )
-
-            current_asset_value_chosen_currency = rate * old_asset_value_usd
-            current_asset_value_in_usd = convert(
-                current_asset_value_chosen_currency, "USD", to_currency, date
-            )
-
-            if filters.get("presentation_currency") == "USD":
-                entry["current_gross_purchase_amount"] = (
-                    current_gross_purchase_amount_in_usd
-                )
-                entry["current_opening_accumulated_depreciation"] = (
-                    current_opening_accumulated_depreciation_in_usd
-                )
-                entry["current_depreciated_amount"] = current_depreciated_amount_in_usd
-                entry["current_asset_value"] = current_asset_value_in_usd
-            else:
-                entry["current_gross_purchase_amount"] = (
-                    current_gross_purchase_amount_chosen_currency
-                )
-                entry["current_opening_accumulated_depreciation"] = (
-                    current_opening_accumulated_depreciation_chosen_currency
-                )
-                entry["current_depreciated_amount"] = (
-                    current_depreciated_amount_chosen_currency
-                )
-                entry["current_asset_value"] = current_asset_value_chosen_currency
-
     return data
