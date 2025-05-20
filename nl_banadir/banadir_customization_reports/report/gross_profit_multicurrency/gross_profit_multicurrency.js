@@ -42,7 +42,7 @@ frappe.query_reports["Gross Profit MultiCurrency"] = {
       label: __("Group By"),
       fieldtype: "Select",
       options:
-        "Invoice\nItem Code\nItem Group\nBrand\nWarehouse\nCustomer\nCustomer Group\nTerritory\nSales Person\nProject\nMonthly\nPayment Term\nBranch\nMarka",
+        "Invoice\nItem Code\nItem Group\nBrand\nWarehouse\nCustomer\nCustomer Group\nTerritory\nSales Person\nProject\nMonthly\nPayment Term\nBranch\nMarka\nMould Type",
       default: "Invoice",
     },
     {

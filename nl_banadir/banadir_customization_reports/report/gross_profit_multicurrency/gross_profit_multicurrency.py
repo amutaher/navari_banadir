@@ -173,6 +173,14 @@ def execute(filters=None):
                 "gross_profit",
                 "gross_profit_percent",
             ],
+            "mould_type": [
+                "mould_type",
+                "qty",
+                "base_amount",
+                "buying_amount",
+                "gross_profit",
+                "gross_profit_percent",
+            ],
         }
     )
 
@@ -243,6 +251,7 @@ def get_data_when_not_grouped_by_invoice(
         row = []
         for col in group_wise_columns.get(scrub(filters.group_by)):
             row.append(src.get(col))
+            print("ROW", row)
 
         row.append(filters.currency)
 
@@ -332,6 +341,13 @@ def get_columns(group_wise_columns, filters):
                 "fieldname": "marka",
                 "fieldtype": "Link",
                 "options": "Marka",
+                "width": 100,
+            },
+            "mould_type": {
+                "label": _("Mould Type"),
+                "fieldname": "mould_type",
+                "fieldtype": "Link",
+                "options": "Mould Type",
                 "width": 100,
             },
             "cost_center": {
@@ -994,8 +1010,10 @@ class GrossProfitGenerator:
 				`tabSales Invoice`.customer, `tabSales Invoice`.customer_group,
 				`tabSales Invoice`.territory, `tabSales Invoice Item`.item_code,
 				`tabSales Invoice`.marka,
-				`tabSales Invoice`.branch,	`tabSales Invoice`.cost_center,
+				`tabSales Invoice`.branch,	
+                `tabSales Invoice`.cost_center,
 				`tabSales Invoice`.total_qty,
+                `tabSales Invoice Item`.die_type as mould_type, 
 				`tabSales Invoice Item`.item_name, `tabSales Invoice Item`.description,
 				`tabSales Invoice Item`.warehouse, `tabSales Invoice Item`.item_group,
 				`tabSales Invoice Item`.brand, `tabSales Invoice Item`.so_detail,
@@ -1275,6 +1293,8 @@ def get_currency_fields(group_by):
         elif group_by == "Branch":
             currency_indices = range(2, 6)
         elif group_by == "Marka":
+            currency_indices = range(2, 6)
+        elif group_by == "Mould Type":
             currency_indices = range(2, 6)
 
     return currency_fields, currency_indices
