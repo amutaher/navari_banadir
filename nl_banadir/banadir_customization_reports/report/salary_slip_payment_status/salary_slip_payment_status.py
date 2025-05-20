@@ -5,7 +5,7 @@ from typing import List, Dict
 
 import frappe
 from frappe.query_builder import DocType
-from frappe.query_builder.functions import IfNull
+from frappe.query_builder.functions import IfNull, Sum
 
 
 def execute(filters=None):
@@ -38,8 +38,17 @@ def get_data(filters: Dict) -> List[Dict]:
 
     results = query.run(as_dict=True)
 
+    # Get paid amounts from JE
+    paid_amounts = get_paid_amounts([row["name"] for row in results])
+
     for row in results:
-        row["payment_status"] = "Paid" if row.get("journal_entry") else "Unpaid"
+        slip_name = row["name"]
+        payable = row.get("net_pay", 0)
+        paid = paid_amounts.get(slip_name, 0.0)
+        row["payable_amount"] = payable
+        row["paid_amount"] = paid
+        row["balance"] = payable - paid
+        row["payment_status"] = "Paid" if paid >= payable else "Unpaid"
 
     return results
 
@@ -66,6 +75,66 @@ def apply_filters(query, SalarySlip, filters: Dict):
         )
 
     return query
+
+
+def get_paid_amounts(salary_slips: List[str]) -> Dict[str, float]:
+    if not salary_slips:
+        return {}
+
+    # Step 1: Get Salary Slip info (name, employee, payroll_entry)
+    salary_slip_data = frappe.get_all(
+        "Salary Slip",
+        filters={"name": ["in", salary_slips]},
+        fields=["name", "employee", "payroll_entry"],
+    )
+
+    # Build mapping
+    slip_map = {
+        (d["employee"], d["payroll_entry"]): d["name"]
+        for d in salary_slip_data
+        if d["payroll_entry"]  # ensure payroll_entry is present
+    }
+
+    payroll_entries = list(
+        set(d["payroll_entry"] for d in salary_slip_data if d["payroll_entry"])
+    )
+    if not payroll_entries:
+        return {}
+
+    # Step 2: Query Journal Entry Account
+    JEA = DocType("Journal Entry Account")
+    JE = DocType("Journal Entry")
+
+    query = (
+        frappe.qb.from_(JEA)
+        .inner_join(JE)
+        .on(JE.name == JEA.parent)
+        .select(
+            JEA.party,
+            JEA.reference_name.as_("payroll_entry"),
+            Sum(JEA.credit).as_("credit_amount"),
+        )
+        .where(
+            (JEA.reference_type == "Payroll Entry")
+            & (JEA.reference_name.isin(payroll_entries))
+            & (JEA.party_type == "Employee")
+            & (JE.docstatus == 1)
+        )
+        .groupby(JEA.party, JEA.reference_name)
+    )
+
+    results = query.run(as_dict=True)
+
+    # Step 3: Match journal rows to slips via (employee, payroll_entry)
+    paid_amounts = {}
+
+    for row in results:
+        key = (row["party"], row["payroll_entry"])
+        salary_slip_name = slip_map.get(key)
+        if salary_slip_name:
+            paid_amounts[salary_slip_name] = row["credit_amount"]
+
+    return paid_amounts
 
 
 def get_columns() -> List[Dict]:
@@ -104,14 +173,6 @@ def get_columns() -> List[Dict]:
             "width": 120,
         },
         {
-            "label": "Net Pay",
-            "fieldname": "net_pay",
-            "fieldtype": "Currency",
-            "options": "currency",
-            "width": 180,
-            "hidden": 1,
-        },
-        {
             "label": "Currency",
             "fieldname": "currency",
             "fieldtype": "Link",
@@ -131,6 +192,27 @@ def get_columns() -> List[Dict]:
             "fieldname": "payment_status",
             "fieldtype": "Data",
             "width": 100,
+        },
+        {
+            "label": "Payable Amount",
+            "fieldname": "payable_amount",
+            "fieldtype": "Currency",
+            "options": "currency",
+            "width": 120,
+        },
+        {
+            "label": "Paid Amount",
+            "fieldname": "paid_amount",
+            "fieldtype": "Currency",
+            "options": "currency",
+            "width": 120,
+        },
+        {
+            "label": "Balance",
+            "fieldname": "balance",
+            "fieldtype": "Currency",
+            "options": "currency",
+            "width": 120,
         },
     ]
 
