@@ -127,6 +127,8 @@ def get_data(filters):
         data = get_group_by_data(
             group_by, conditions, assets_linked_to_fb, depreciation_amount_map
         )
+        for asst in data:
+            asst["exchange_rate"] = exchange_rate
         data = convert_as_per_current_exchange_rate(
             data, filters, "USD", filters.get("presentation_currency")
         )
@@ -161,7 +163,7 @@ def get_data(filters):
                     filters.get("currency_exchange_date"),
                 )
                 row["exchange_rate"] = exchange_rate
-
+        # frappe.throw(str(data))
         return data
     fields = [
         "name as asset_id",
@@ -188,7 +190,7 @@ def get_data(filters):
     assets_record = convert_as_per_current_exchange_rate(
         assets_record, filters, "USD", filters.get("presentation_currency")
     )
-    # frappe.throw(str(assets_record))
+
     for asset in assets_record:
         if (
             assets_linked_to_fb
@@ -265,7 +267,6 @@ def prepare_chart_data(data, filters):
         filters_filter_based_on = "Date Range"
         date_field = "purchase_date"
         filtered_data = [d for d in data if d.get(date_field)]
-        # frappe.throw(str(filtered_data))
 
         filters_from_date = min(filtered_data, key=lambda a: a.get(date_field)).get(
             date_field
@@ -832,8 +833,12 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
         if "depreciated_amount" in entry:
             old_depreciated_amount_usd = entry["depreciated_amount"] / exchange_rate
             converted = rate * old_depreciated_amount_usd
-            if filters.get("presentation_currency") != "USD":
-                entry["current_depreciated_amount"] = converted
+
+            entry["current_depreciated_amount"] = (
+                convert(converted, "USD", to_currency, date)
+                if filters.get("presentation_currency") == "USD"
+                else converted
+            )
 
         if "asset_value" in entry:
             old_asset_value_usd = entry["asset_value"] / exchange_rate
