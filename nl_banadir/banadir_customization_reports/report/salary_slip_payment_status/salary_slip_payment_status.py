@@ -50,6 +50,11 @@ def get_data(filters: Dict) -> List[Dict]:
         row["balance"] = payable - paid
         row["payment_status"] = "Paid" if paid >= payable else "Unpaid"
 
+    if filters.get("status") == "Paid":
+        results = [row for row in results if row["payment_status"] == "Paid"]
+    elif filters.get("status") == "Unpaid":
+        results = [row for row in results if row["payment_status"] == "Unpaid"]
+
     return results
 
 
@@ -62,11 +67,6 @@ def apply_filters(query, SalarySlip, filters: Dict):
 
     if filters.get("employee"):
         query = query.where(SalarySlip.employee == filters["employee"])
-
-    if filters.get("status") == "Paid":
-        query = query.where(SalarySlip.journal_entry.isnotnull())
-    elif filters.get("status") == "Unpaid":
-        query = query.where(SalarySlip.journal_entry.isnull())
 
     if filters.get("from_date") and filters.get("to_date"):
         query = query.where(
@@ -88,51 +88,65 @@ def get_paid_amounts(salary_slips: List[str]) -> Dict[str, float]:
         fields=["name", "employee", "payroll_entry"],
     )
 
-    # Build mapping
+    # Build maps
     slip_map = {
         (d["employee"], d["payroll_entry"]): d["name"]
         for d in salary_slip_data
-        if d["payroll_entry"]  # ensure payroll_entry is present
+        if d["payroll_entry"]
     }
-
     payroll_entries = list(
-        set(d["payroll_entry"] for d in salary_slip_data if d["payroll_entry"])
+        {d["payroll_entry"] for d in salary_slip_data if d["payroll_entry"]}
     )
-    if not payroll_entries:
-        return {}
 
-    # Step 2: Query Journal Entry Account
+    paid_amounts = {}
+
+    # Step 2: Payments directly against Salary Slips
     JEA = DocType("Journal Entry Account")
     JE = DocType("Journal Entry")
 
-    query = (
+    direct_slip_query = (
         frappe.qb.from_(JEA)
         .inner_join(JE)
-        .on(JE.name == JEA.parent)
-        .select(
-            JEA.party,
-            JEA.reference_name.as_("payroll_entry"),
-            Sum(JEA.credit).as_("credit_amount"),
-        )
+        .on(JEA.parent == JE.name)
+        .select(JEA.reference_name, Sum(JEA.credit).as_("credit_amount"))
         .where(
-            (JEA.reference_type == "Payroll Entry")
-            & (JEA.reference_name.isin(payroll_entries))
+            (JEA.reference_type == "Salary Slip")
+            & (JEA.reference_name.isin(salary_slips))
             & (JEA.party_type == "Employee")
             & (JE.docstatus == 1)
         )
-        .groupby(JEA.party, JEA.reference_name)
+        .groupby(JEA.reference_name)
     )
 
-    results = query.run(as_dict=True)
+    for row in direct_slip_query.run(as_dict=True):
+        paid_amounts[row["reference_name"]] = row["credit_amount"]
 
-    # Step 3: Match journal rows to slips via (employee, payroll_entry)
-    paid_amounts = {}
+    # Step 3: Payments indirectly via Payroll Entry (actual payment JE)
+    if payroll_entries:
+        payroll_payment_query = (
+            frappe.qb.from_(JEA)
+            .inner_join(JE)
+            .on(JEA.parent == JE.name)
+            .select(
+                JEA.party,
+                JEA.reference_name.as_("payroll_entry"),
+                Sum(JEA.debit).as_("paid_amount"),
+            )
+            .where(
+                (JEA.reference_type == "Payroll Entry")
+                & (JEA.reference_name.isin(payroll_entries))
+                & (JEA.party_type == "Employee")
+                & (JEA.debit > 0)  # actual payment to employee
+                & (JE.docstatus == 1)
+            )
+            .groupby(JEA.party, JEA.reference_name)
+        )
 
-    for row in results:
-        key = (row["party"], row["payroll_entry"])
-        salary_slip_name = slip_map.get(key)
-        if salary_slip_name:
-            paid_amounts[salary_slip_name] = row["credit_amount"]
+        for row in payroll_payment_query.run(as_dict=True):
+            key = (row["party"], row["payroll_entry"])
+            slip_name = slip_map.get(key)
+            if slip_name and slip_name not in paid_amounts:
+                paid_amounts[slip_name] = row["paid_amount"]
 
     return paid_amounts
 
