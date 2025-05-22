@@ -191,16 +191,20 @@ def get_data(filters):
         "available_for_use_date",
         "purchase_invoice",
         "opening_accumulated_depreciation",
+        "custom_transaction_exchange_rate",
     ]
 
     assets_record = frappe.db.get_all("Asset", filters=conditions, fields=fields)
+    # frappe.throw(str(assets_record))
     for asst in assets_record:
         # frappe.throw(str(asst["purchase_date"]))
         asst["exchange_rate"] = get_currency_exchange_rate(
             filters, asst["purchase_date"]
         )
-        asst["exchange_rate_usd"] = get_currency_exchange_rate_usd(
-            filters, asst["purchase_date"]
+        asst["exchange_rate_usd"] = (
+            asst["custom_transaction_exchange_rate"]
+            if asst["custom_transaction_exchange_rate"] > 0.0
+            else get_currency_exchange_rate_usd(filters, asst["purchase_date"])
         )
         asst["current_exchange_rate"] = get_currency_exchange_rate_usd(
             filters, frappe.utils.now()

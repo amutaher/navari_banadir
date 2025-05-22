@@ -110,14 +110,14 @@ def execute(filters=None):
 
     update_included_uom_in_report(columns, data, include_uom, conversion_factors)
     for row in data:
-        row["exchange_rate"], row["current_exchange_rate"] = _get_exchange_rate(
+        row["current_exchange_rate"] = _get_exchange_rate(
             filters.get("company"), row.get("posting_date")
         )
     data = convert_as_per_current_exchange_rate(
         data, filters, "USD", presentation_currency
     )
     data = convert_currency_fields(data, filters)
-
+    # frappe.throw(str(data))
     return columns, data
 
 
@@ -527,7 +527,46 @@ def get_stock_ledger_entries(filters, items):
 
     query = apply_warehouse_filter(query, sle, filters)
 
-    return query.run(as_dict=True)
+    data = query.run(as_dict=True)
+    # frappe.throw(str(data))
+    data = set_exchange_rate_in_rows(data)
+    # frappe.throw(str(data))
+    return data
+
+
+# Get exchange rate for incoming only
+def set_exchange_rate_in_rows(data):
+    incoming_types = ["Purchase Invoice", "Purchase Receipt"]
+    # today = frappe.utils.getdate()
+
+    for row in data:
+        posting_date = row.get("posting_date")
+        company = row.get("company")
+        voucher_type = row.get("voucher_type")
+        actual_qty = row.get("actual_qty")
+
+        # Default to system exchange rate
+        company_currency = frappe.get_cached_value(
+            "Company", company, "default_currency"
+        )
+        exchange_rate = get_exchange_rate("USD", company_currency, posting_date)
+
+        # Check if incoming
+        if actual_qty > 0 or voucher_type in incoming_types:
+            try:
+                doc = frappe.get_doc(voucher_type, row.get("voucher_no"))
+                conversion_rate = getattr(doc, "conversion_rate", 0) or 0
+                # Use conversion rate only if it's non-zero
+                if conversion_rate > 0:
+                    exchange_rate = conversion_rate
+            except Exception as e:
+                frappe.log_error(
+                    f"Error fetching {voucher_type} {row.get('voucher_no')}: {str(e)}"
+                )
+
+        # Save to row
+        row["exchange_rate"] = exchange_rate
+    return data
 
 
 def get_serial_and_batch_bundles(filters):
@@ -766,9 +805,9 @@ def create_valuation_rate_with_uom(filter):
 def _get_exchange_rate(company, posting_date):
     today = frappe.utils.getdate()
     company_currency = frappe.get_cached_value("Company", company, "default_currency")
-    exchange_rate = get_exchange_rate("USD", company_currency, posting_date)
+    # exchange_rate = get_exchange_rate("USD", company_currency, posting_date)
     current_exchange_rate = get_exchange_rate("USD", company_currency, today)
-    return exchange_rate, current_exchange_rate
+    return current_exchange_rate
 
 
 def convert_as_per_current_exchange_rate(data, filters, from_currency, to_currency):
