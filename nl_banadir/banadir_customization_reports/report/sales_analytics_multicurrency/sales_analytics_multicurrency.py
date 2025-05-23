@@ -113,7 +113,6 @@ class Analytics:
         skip_total_row = 0
         if self.filters.tree_type in [
             "Supplier Group",
-            "Item Group",
             "Customer Group",
             "Territory",
         ]:
