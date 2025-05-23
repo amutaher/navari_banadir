@@ -98,7 +98,6 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
                 )
                 entry["current_landed_cost"] = current_landed_cost_chosen_currency
 
-            # Calculate current_total
             old_total_in_usd = entry["amount"] / entry["exchange_rate"]
             current_total_chosen_currency = (
                 get_current_exchange_rate(from_currency, to_currency, date)
@@ -432,7 +431,6 @@ def get_columns(additional_table_columns, filters):
         },
     ]
 
-    # Add the Alternative UOM column after Stock UOM
     if filters.get("alternative_uom"):
         columns.append(
             {
@@ -465,15 +463,12 @@ def get_columns(additional_table_columns, filters):
             "fieldname": "rate",
             "fieldtype": "Currency",
             "options": "currency",
-            # "precision": 2,
             "width": 100,
             "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Current Rate ({presentation_currency})"),
             "fieldname": "current_rate",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "width": 100,
@@ -482,8 +477,6 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Landed Cost ({presentation_currency})"),
             "fieldname": "landed_cost_voucher_amount",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "width": 100,
@@ -492,8 +485,6 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Current Landed Cost ({presentation_currency})"),
             "fieldname": "current_landed_cost",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "width": 100,
@@ -502,8 +493,6 @@ def get_columns(additional_table_columns, filters):
         {
             "label": f"Rate + LC ({presentation_currency})",
             "fieldname": "rate_plus_landed_cost",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "width": 100,
@@ -512,18 +501,13 @@ def get_columns(additional_table_columns, filters):
         {
             "label": f"Current Rate + LC({presentation_currency})",
             "fieldname": "current_rate_plus_landed_cost",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "width": 100,
-            # "hidden": 1 if filters.get("hide_column") else 0,
         },
         {
             "label": _(f"Amount({presentation_currency})"),
             "fieldname": "amount",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "width": 100,
@@ -531,8 +515,6 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Total LC ({presentation_currency})"),
             "fieldname": "total_landed_cost",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "width": 100,
@@ -540,8 +522,6 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Amount + LC ({presentation_currency})"),
             "fieldname": "amount_plus_landed_cost",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "width": 100,
@@ -560,8 +540,6 @@ def get_columns(additional_table_columns, filters):
         {
             "label": _(f"Current Total ({presentation_currency})"),
             "fieldname": "current_total",
-            # "fieldtype": "Float",
-            # "precision": 2,
             "fieldtype": "Currency",
             "options": "currency",
             "hidden": 1 if filters.get("hide_column") else 0,
