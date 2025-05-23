@@ -110,9 +110,7 @@ def execute(filters=None):
 
     update_included_uom_in_report(columns, data, include_uom, conversion_factors)
     for row in data:
-        row["current_exchange_rate"] = _get_exchange_rate(
-            filters.get("company"), row.get("posting_date")
-        )
+        row["current_exchange_rate"] = _get_exchange_rate(filters.get("company"))
     data = convert_as_per_current_exchange_rate(
         data, filters, "USD", presentation_currency
     )
@@ -528,7 +526,6 @@ def get_stock_ledger_entries(filters, items):
     query = apply_warehouse_filter(query, sle, filters)
 
     data = query.run(as_dict=True)
-    # frappe.throw(str(data))
     data = set_exchange_rate_in_rows(data)
     # frappe.throw(str(data))
     return data
@@ -802,10 +799,9 @@ def create_valuation_rate_with_uom(filter):
         return full_formatted_uom
 
 
-def _get_exchange_rate(company, posting_date):
+def _get_exchange_rate(company):
     today = frappe.utils.getdate()
     company_currency = frappe.get_cached_value("Company", company, "default_currency")
-    # exchange_rate = get_exchange_rate("USD", company_currency, posting_date)
     current_exchange_rate = get_exchange_rate("USD", company_currency, today)
     return current_exchange_rate
 
@@ -815,7 +811,6 @@ def convert_as_per_current_exchange_rate(data, filters, from_currency, to_curren
     for entry in data:
         # Check if 'rate' and 'exchange_rate' keys exist in the entry
         if "exchange_rate" in entry:
-            # In dollars
             old_incoming_rate_in_usd = entry["incoming_rate"] / entry["exchange_rate"]
 
             old_valuation_rate_in_usd = entry["valuation_rate"] / entry["exchange_rate"]
